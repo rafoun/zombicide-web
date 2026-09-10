@@ -1,6 +1,6 @@
 const CELL_SIZE = 60;
 
-export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn }) {
+export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSearch }) {
   const { board, characters, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
   const isMyTurn = currentPlayerId === mySocketId;
@@ -25,8 +25,22 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn }) {
           {isMyTurn ? " (toi)" : ""}
         </p>
         {myCharacter && <p>Actions restantes : {myCharacter.actionsLeft}</p>}
+        {isMyTurn && myCharacter?.actionsLeft > 0 && (
+          <button onClick={onSearch}>Fouiller (piocher équipement)</button>
+        )}
         {isMyTurn && <button onClick={onEndTurn}>Terminer mon tour</button>}
       </div>
+
+      {myCharacter && myCharacter.equipment.length > 0 && (
+        <div className="equipment-list">
+          <strong>Ton équipement :</strong>
+          <ul>
+            {myCharacter.equipment.map((card, i) => (
+              <li key={i}>{card.name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <svg
         width={board.width * CELL_SIZE}

@@ -1,4 +1,5 @@
 import { canMove } from "./board.js";
+import { shuffle } from "./decks.js";
 
 // Applique une action de jeu à l'état courant. Retourne { ok: true, state }
 // ou { ok: false, error } sans jamais muter l'état en cas de refus.
@@ -16,6 +17,9 @@ export function applyAction(state, playerSocketId, action) {
   }
   if (action.type === "end_turn") {
     return handleEndTurn(state);
+  }
+  if (action.type === "search") {
+    return handleSearch(state, playerSocketId);
   }
 
   return { ok: false, error: `Action inconnue : ${action.type}` };
@@ -37,6 +41,27 @@ function handleMove(state, playerSocketId, action) {
   if (occupied) return { ok: false, error: "Case déjà occupée par un autre personnage." };
 
   character.position = target;
+  character.actionsLeft -= 1;
+
+  return { ok: true, state };
+}
+
+function handleSearch(state, playerSocketId) {
+  const character = state.characters.find((c) => c.playerId === playerSocketId);
+  if (!character) return { ok: false, error: "Personnage introuvable." };
+  if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
+
+  // TODO: restreindre la fouille aux zones "bâtiment" une fois les tuiles enrichies.
+  if (state.decks.equipmentDeck.length === 0) {
+    if (state.decks.discardEquipment.length === 0) {
+      return { ok: false, error: "Plus aucune carte équipement disponible." };
+    }
+    state.decks.equipmentDeck = shuffle(state.decks.discardEquipment);
+    state.decks.discardEquipment = [];
+  }
+
+  const card = state.decks.equipmentDeck.pop();
+  character.equipment.push(card);
   character.actionsLeft -= 1;
 
   return { ok: true, state };

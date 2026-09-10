@@ -59,6 +59,7 @@ export default function App() {
         mySocketId={socket.id}
         onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
         onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
+        onSearch={() => socket.emit("game_action", { type: "search" })}
       />
     );
   }

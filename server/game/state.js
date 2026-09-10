@@ -1,4 +1,5 @@
 import { createStarterBoard, startingPositions } from "./board.js";
+import { createEquipmentDeck } from "./decks.js";
 
 export function createInitialGameState(players) {
   const board = createStarterBoard();
@@ -22,8 +23,8 @@ export function createInitialGameState(players) {
     })),
     zombies: [], // { id, type: "walker"|"runner"|"fatty"|"abomination", position, ... }
     decks: {
-      zombieDeck: [], // pioche zombie par niveau de danger (blue/yellow/orange/red)
-      equipmentDeck: [],
+      zombieDeck: [], // pioche zombie par niveau de danger (blue/yellow/orange/red) — arrive avec l'IA zombie
+      equipmentDeck: createEquipmentDeck(),
       discardZombie: [],
       discardEquipment: [],
     },
