@@ -10,7 +10,7 @@ const nanoid = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 5);
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: "http://localhost:3000" },
+  cors: { origin: "https://zombicide-web.vercel.app" },
 });
 
 app.get("/health", (req, res) => res.json({ ok: true }));
