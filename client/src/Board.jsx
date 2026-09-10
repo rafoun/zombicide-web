@@ -1,6 +1,6 @@
-const CELL_SIZE = 60;
+const CELL_SIZE = 64;
 
-export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSearch }) {
+export default function Board({ gameState, mySocketId, onMoveTo }) {
   const { board, characters, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
   const isMyTurn = currentPlayerId === mySocketId;
@@ -19,33 +19,19 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSe
 
   return (
     <div className="board-wrapper">
-      <div className="board-hud">
-        <p>
-          Manche {round} — Tour de <strong>{currentCharacter?.name}</strong>
-          {isMyTurn ? " (toi)" : ""}
-        </p>
-        {myCharacter && <p>Actions restantes : {myCharacter.actionsLeft}</p>}
-        {isMyTurn && myCharacter?.actionsLeft > 0 && (
-          <button onClick={onSearch}>Fouiller (piocher équipement)</button>
-        )}
-        {isMyTurn && <button onClick={onEndTurn}>Terminer mon tour</button>}
+      <div className="turn-banner">
+        <span className="turn-banner__round">Manche {round}</span>
+        <span className={`turn-banner__player ${isMyTurn ? "turn-banner__player--me" : ""}`}>
+          Tour de {currentCharacter?.name}
+          {isMyTurn ? " — c'est toi" : ""}
+        </span>
       </div>
-
-      {myCharacter && myCharacter.equipment.length > 0 && (
-        <div className="equipment-list">
-          <strong>Ton équipement :</strong>
-          <ul>
-            {myCharacter.equipment.map((card, i) => (
-              <li key={i}>{card.name}</li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <svg
         width={board.width * CELL_SIZE}
         height={board.height * CELL_SIZE}
         className="board-svg"
+        viewBox={`0 0 ${board.width * CELL_SIZE} ${board.height * CELL_SIZE}`}
       >
         {board.cells.map((cell) => {
           const px = cell.x * CELL_SIZE;
@@ -60,25 +46,22 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSe
                 y={py}
                 width={CELL_SIZE}
                 height={CELL_SIZE}
-                fill={cell.isSpawnZone ? "#3a1f1f" : "#2a2a2a"}
-                stroke="#444"
+                className={`board-cell ${cell.isSpawnZone ? "board-cell--spawn" : ""}`}
                 onClick={() => handleCellClick(cell.x, cell.y)}
                 style={{ cursor: clickable ? "pointer" : "default" }}
               />
               {clickable && (
                 <rect
-                  x={px + 2}
-                  y={py + 2}
-                  width={CELL_SIZE - 4}
-                  height={CELL_SIZE - 4}
-                  fill="none"
-                  stroke="#4ade80"
-                  strokeWidth={2}
+                  x={px + 3}
+                  y={py + 3}
+                  width={CELL_SIZE - 6}
+                  height={CELL_SIZE - 6}
+                  className="board-cell__highlight"
                   pointerEvents="none"
                 />
               )}
               {cell.walls.north && (
-                <line x1={px} y1={py} x2={px + CELL_SIZE} y2={py} stroke="#eee" strokeWidth={3} />
+                <line x1={px} y1={py} x2={px + CELL_SIZE} y2={py} className="board-wall" />
               )}
               {cell.walls.south && (
                 <line
@@ -86,12 +69,11 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSe
                   y1={py + CELL_SIZE}
                   x2={px + CELL_SIZE}
                   y2={py + CELL_SIZE}
-                  stroke="#eee"
-                  strokeWidth={3}
+                  className="board-wall"
                 />
               )}
               {cell.walls.west && (
-                <line x1={px} y1={py} x2={px} y2={py + CELL_SIZE} stroke="#eee" strokeWidth={3} />
+                <line x1={px} y1={py} x2={px} y2={py + CELL_SIZE} className="board-wall" />
               )}
               {cell.walls.east && (
                 <line
@@ -99,8 +81,7 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSe
                   y1={py}
                   x2={px + CELL_SIZE}
                   y2={py + CELL_SIZE}
-                  stroke="#eee"
-                  strokeWidth={3}
+                  className="board-wall"
                 />
               )}
             </g>
@@ -112,17 +93,16 @@ export default function Board({ gameState, mySocketId, onMoveTo, onEndTurn, onSe
             <circle
               cx={c.position.x * CELL_SIZE + CELL_SIZE / 2}
               cy={c.position.y * CELL_SIZE + CELL_SIZE / 2}
-              r={CELL_SIZE / 3}
-              fill={c.playerId === mySocketId ? "#4ade80" : "#60a5fa"}
-              stroke="#111"
-              strokeWidth={2}
+              r={CELL_SIZE / 3.2}
+              className={`character-token ${
+                c.playerId === mySocketId ? "character-token--me" : ""
+              }`}
             />
             <text
               x={c.position.x * CELL_SIZE + CELL_SIZE / 2}
               y={c.position.y * CELL_SIZE + CELL_SIZE / 2 + 4}
               textAnchor="middle"
-              fontSize="10"
-              fill="#111"
+              className="character-token__label"
             >
               {c.name.slice(0, 3)}
             </text>

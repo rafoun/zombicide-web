@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { socket } from "./socket.js";
 import Board from "./Board.jsx";
+import PlayerPanel from "./PlayerPanel.jsx";
+import InventoryPanel from "./InventoryPanel.jsx";
 
 export default function App() {
   const [name, setName] = useState("");
   const [codeInput, setCodeInput] = useState("");
-  const [room, setRoom] = useState(null); // { code, hostSocketId, status, players }
+  const [room, setRoom] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState("");
 
@@ -53,14 +55,25 @@ export default function App() {
   const isHost = room && socket.id === room.hostSocketId;
 
   if (gameState) {
+    const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
+    const isMyTurn = currentPlayerId === socket.id;
+    const myCharacter = gameState.characters.find((c) => c.playerId === socket.id);
+
     return (
-      <Board
-        gameState={gameState}
-        mySocketId={socket.id}
-        onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
-        onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
-        onSearch={() => socket.emit("game_action", { type: "search" })}
-      />
+      <div className="game-layout">
+        <PlayerPanel
+          character={myCharacter}
+          isMyTurn={isMyTurn}
+          onSearch={() => socket.emit("game_action", { type: "search" })}
+          onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
+        />
+        <Board
+          gameState={gameState}
+          mySocketId={socket.id}
+          onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
+        />
+        <InventoryPanel equipment={myCharacter?.equipment || []} />
+      </div>
     );
   }
 

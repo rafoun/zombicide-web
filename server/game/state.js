@@ -20,6 +20,7 @@ export function createInitialGameState(players) {
       skills: [],
       equipment: [],
       actionsLeft: 3,
+      zombieKills: 0,
     })),
     zombies: [], // { id, type: "walker"|"runner"|"fatty"|"abomination", position, ... }
     decks: {

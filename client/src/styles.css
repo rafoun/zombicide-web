@@ -1,10 +1,48 @@
+:root {
+  --bg-void: #0d0c0a;
+  --panel-bg: #1a1712;
+  --panel-bg-raised: #211d16;
+  --panel-border: #3a3324;
+  --blood: #8f1d1d;
+  --blood-bright: #c23b3b;
+  --toxic: #6f8a34;
+  --toxic-bright: #9bc23f;
+  --bone: #e8e2d0;
+  --bone-dim: #a89f8a;
+  --wound-blue: #2f5d8a;
+  --wound-yellow: #d4af17;
+  --wound-orange: #c76b1f;
+  --wound-red: #a1272c;
+
+  --font-display: "Oswald", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  background: #1a1a1a;
-  color: #eee;
+  font-family: var(--font-body);
+  background: var(--bg-void);
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(143, 29, 29, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(111, 138, 52, 0.05), transparent 45%);
+  color: var(--bone);
   margin: 0;
   padding: 2rem;
+  min-height: 100vh;
 }
+
+h1, h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 1rem;
+}
+
+/* ---------- Lobby ---------- */
 
 .app {
   max-width: 480px;
@@ -16,11 +54,16 @@ label {
   flex-direction: column;
   gap: 0.25rem;
   margin-bottom: 1rem;
+  font-family: var(--font-body);
 }
 
 input {
-  padding: 0.5rem;
+  padding: 0.6rem 0.75rem;
   font-size: 1rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--bone);
+  border-radius: 2px;
 }
 
 .actions {
@@ -35,39 +78,327 @@ input {
 }
 
 button {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-weight: 500;
   cursor: pointer;
+  background: var(--blood);
+  color: var(--bone);
+  border: 1px solid var(--blood-bright);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+button:hover {
+  background: var(--blood-bright);
+}
+
+button:disabled {
+  background: #333;
+  border-color: #444;
+  color: var(--bone-dim);
+  cursor: not-allowed;
+}
+
+.button--secondary {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--bone-dim);
+}
+
+.button--secondary:hover {
+  background: var(--panel-bg-raised);
+  color: var(--bone);
 }
 
 .error {
-  color: #ff6b6b;
+  color: var(--blood-bright);
 }
 
+/* ---------- Game layout (3 colonnes) ---------- */
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) 1fr minmax(220px, 260px);
+  gap: 1.5rem;
+  max-width: 1300px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Board (colonne centrale) ---------- */
+
 .board-wrapper {
-  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
 }
 
-.board-hud {
+.turn-banner {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.15rem;
+  font-family: var(--font-display);
+}
+
+.turn-banner__round {
+  font-size: 0.8rem;
+  color: var(--bone-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.turn-banner__player {
+  font-size: 1.2rem;
+}
+
+.turn-banner__player--me {
+  color: var(--toxic-bright);
 }
 
 .board-svg {
-  background: #111;
-  border: 1px solid #444;
+  background: #0a0908;
+  border: 2px solid var(--panel-border);
+  max-width: 100%;
+  height: auto;
 }
 
-.equipment-list {
-  align-self: flex-start;
+.board-cell {
+  fill: #1c1a15;
+  stroke: #2a2620;
+  stroke-width: 1;
 }
 
-.equipment-list ul {
-  margin: 0.25rem 0 0;
-  padding-left: 1.25rem;
+.board-cell--spawn {
+  fill: #2a1414;
+}
+
+.board-cell__highlight {
+  fill: none;
+  stroke: var(--toxic-bright);
+  stroke-width: 2;
+}
+
+.board-wall {
+  stroke: var(--bone-dim);
+  stroke-width: 3;
+}
+
+.character-token {
+  stroke: #0a0908;
+  stroke-width: 2;
+  fill: #5b7fb5;
+}
+
+.character-token--me {
+  fill: var(--toxic-bright);
+}
+
+.character-token__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: #0a0908;
+}
+
+/* ---------- Panneau joueur (colonne gauche) ---------- */
+
+.player-panel,
+.inventory-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 1.25rem;
+  border-radius: 2px;
+}
+
+.player-panel__name {
+  font-size: 1.4rem;
+  color: var(--bone);
+}
+
+.wound-track {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.wound-pip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  opacity: 0.3;
+  border: 2px solid transparent;
+}
+
+.wound-pip--blue { background: var(--wound-blue); }
+.wound-pip--yellow { background: var(--wound-yellow); }
+.wound-pip--orange { background: var(--wound-orange); }
+.wound-pip--red { background: var(--wound-red); }
+
+.wound-pip--active {
+  opacity: 1;
+  border-color: var(--bone);
+}
+
+.wound-label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--bone-dim);
+  margin: 0 0 1.25rem;
+}
+
+.stat-block {
+  margin-bottom: 1.25rem;
+}
+
+.stat-block__label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin-bottom: 0.4rem;
+}
+
+.action-pips {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.action-pip {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--panel-border);
+  background: transparent;
+}
+
+.action-pip--full {
+  background: var(--toxic-bright);
+  border-color: var(--toxic-bright);
+}
+
+.kill-gauge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.kill-gauge__count {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--blood-bright);
+  min-width: 1.5rem;
+}
+
+.kill-gauge__bar {
+  flex: 1;
+  height: 8px;
+  background: #100f0c;
+  border: 1px solid var(--panel-border);
+}
+
+.kill-gauge__fill {
+  height: 100%;
+  background: var(--blood-bright);
+  transition: width 0.3s ease;
+}
+
+.player-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+/* ---------- Inventaire (colonne droite) ---------- */
+
+.inventory-panel__title {
+  font-size: 1.1rem;
+}
+
+.inventory-panel__empty {
+  font-size: 0.9rem;
+  color: var(--bone-dim);
+  font-style: italic;
+}
+
+.inventory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inventory-item {
+  position: relative;
+  padding: 0.6rem 0.75rem;
+  background: var(--panel-bg-raised);
+  border: 1px solid var(--panel-border);
+  cursor: default;
+}
+
+.inventory-item__name {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.item-tooltip {
+  display: none;
+  position: absolute;
+  right: 100%;
+  top: 0;
+  margin-right: 0.75rem;
+  width: 220px;
+  background: #100f0c;
+  border: 1px solid var(--toxic);
+  padding: 0.75rem;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.inventory-item:hover .item-tooltip {
+  display: block;
+}
+
+.item-tooltip__description {
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+.item-stats {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.item-stats > div {
+  text-align: center;
+}
+
+.item-stats dt {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+
+.item-stats dd {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--toxic-bright);
+  margin: 0;
 }
