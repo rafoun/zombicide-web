@@ -7,7 +7,7 @@
 //   le niveau de danger le plus élevé parmi les survivants vivants.
 
 import { canMove } from "./board.js";
-import { SPAWN_TABLE, dangerLevelForAdrenaline } from "./decks.js";
+import { shuffle, dangerLevelForAdrenaline } from "./decks.js";
 
 export const ZOMBIE_TYPES = {
   walker: { label: "Marcheur", killDamage: 1, adrenaline: 1, actionsPerActivation: 1 },
@@ -28,28 +28,63 @@ export function highestDangerLevel(characters) {
   return best;
 }
 
+function makeZombie(type, cell) {
+  return {
+    id: `z-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    position: { x: cell.x, y: cell.y },
+  };
+}
+
+function drawZombieCard(state) {
+  if (state.decks.zombieDeck.length === 0) {
+    if (state.decks.zombieDiscard.length === 0) return null; // aucune carte nulle part (ne devrait pas arriver)
+    state.decks.zombieDeck = shuffle(state.decks.zombieDiscard);
+    state.decks.zombieDiscard = [];
+  }
+  const card = state.decks.zombieDeck.pop();
+  state.decks.zombieDiscard.push(card);
+  return card;
+}
+
+// Étape SPAWN (p. 25) : une carte Zombie par Zone de Spawn active, dans
+// l'ordre (Zone de Départ du Spawn en premier, puis les autres — ici l'ordre
+// dans lequel chaque plateau les déclare, qui suit déjà une logique
+// géographique cohérente), au lieu de vider toute une table d'un coup.
 export function spawnZombies(state) {
   const spawnCells = state.board.cells.filter((c) => c.isSpawnZone);
-  if (spawnCells.length === 0) return;
+  if (spawnCells.length === 0) return [];
 
   const level = highestDangerLevel(state.characters);
-  const spawnList = SPAWN_TABLE[level] || SPAWN_TABLE.blue;
-  const hasAbomination = state.zombies.some((z) => z.type === "abomination");
+  const events = [];
 
-  let i = 0;
-  for (const entry of spawnList) {
-    if (entry.type === "abomination" && hasAbomination) continue; // 1 seule à la fois
-    for (let n = 0; n < entry.count; n++) {
-      const cell = spawnCells[i % spawnCells.length];
-      i++;
-      state.zombies.push({
-        id: `z-${state.round}-${i}-${Math.random().toString(36).slice(2, 7)}`,
-        type: entry.type,
-        position: { x: cell.x, y: cell.y },
-      });
-      if (entry.type === "abomination") break; // jamais plus d'une par vague
+  for (const cell of spawnCells) {
+    const card = drawZombieCard(state);
+    if (!card) break;
+
+    const zone = state.board.zones[cell.zoneId];
+    const zoneLabel = zone?.label || "une zone de spawn";
+
+    if (card.type === "abomination") {
+      const hasAbomination = state.zombies.some((z) => z.type === "abomination");
+      if (!hasAbomination) {
+        state.zombies.push(makeZombie("abomination", cell));
+        events.push(`Une Abomination apparaît (${zoneLabel}) !`);
+      } else {
+        state.pendingExtraActivations = state.pendingExtraActivations || [];
+        state.pendingExtraActivations.push("abomination");
+        events.push("Carte Abomination piochée alors qu'il y en a déjà une : elle agira une fois de plus ce tour-ci.");
+      }
+      continue;
     }
+
+    const count = card.counts[level] ?? 0;
+    if (count === 0) continue; // ex. carte Brute piochée en Bleu/Jaune : rien n'apparaît
+    for (let n = 0; n < count; n++) state.zombies.push(makeZombie(card.type, cell));
+    events.push(`${count} ${ZOMBIE_TYPES[card.type].label}(s) apparaissent (${zoneLabel}).`);
   }
+
+  return events;
 }
 
 function neighbors(board, pos) {
@@ -95,26 +130,42 @@ function biteRandomCharacter(charactersInCell, events) {
   }
 }
 
+// Résout une seule Activation d'un zombie : ATTAQUE s'il partage la zone
+// d'un Survivant vivant, sinon DÉPLACEMENT d'une case vers le plus proche.
+// Renvoie false si plus personne n'est vivant (plus la peine de continuer).
+function activateOnce(zombie, state, events) {
+  const aliveCharacters = state.characters.filter((c) => !c.dead);
+  if (aliveCharacters.length === 0) return false;
+
+  const inSameCell = aliveCharacters.filter((c) => sameCell(c.position, zombie.position));
+  if (inSameCell.length > 0) {
+    biteRandomCharacter(inSameCell, events);
+    return true;
+  }
+
+  const step = nextStepToward(state.board, zombie.position, aliveCharacters.map((c) => c.position));
+  if (step) zombie.position = step;
+  return true;
+}
+
 export function activateZombies(state) {
   const events = [];
 
   for (const zombie of state.zombies) {
     const actions = ZOMBIE_TYPES[zombie.type]?.actionsPerActivation || 1;
-
     for (let a = 0; a < actions; a++) {
-      const aliveCharacters = state.characters.filter((c) => !c.dead);
-      if (aliveCharacters.length === 0) return events;
+      if (!activateOnce(zombie, state, events)) return events;
+    }
+  }
 
-      const inSameCell = aliveCharacters.filter((c) => sameCell(c.position, zombie.position));
-      if (inSameCell.length > 0) {
-        biteRandomCharacter(inSameCell, events);
-        continue;
-      }
-
-      const step = nextStepToward(state.board, zombie.position, aliveCharacters.map((c) => c.position));
-      if (step) zombie.position = step;
-      // NOTE: un zombie qui vient de se déplacer n'attaque pas le même tour
-      // (sauf un Coureur qui rejoue une 2e Action juste après, cf. boucle).
+  // Cartes Abomination piochées alors qu'il y en avait déjà une sur le
+  // plateau (p. 17) : chaque Abomination déjà présente rejoue une Activation
+  // au lieu de faire apparaître une 2e Abomination.
+  const pending = state.pendingExtraActivations || [];
+  state.pendingExtraActivations = [];
+  for (const type of pending) {
+    for (const zombie of state.zombies.filter((z) => z.type === type)) {
+      activateOnce(zombie, state, events);
     }
   }
 

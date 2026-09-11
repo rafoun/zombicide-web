@@ -1,5 +1,5 @@
 import { startingPositions } from "./board.js";
-import { createEquipmentDeck, maxActionsForAdrenaline } from "./decks.js";
+import { createEquipmentDeck, createZombieDeck, maxActionsForAdrenaline } from "./decks.js";
 import { getScenario } from "./scenarios.js";
 
 export function createInitialGameState(players, scenarioId) {
@@ -34,6 +34,8 @@ export function createInitialGameState(players, scenarioId) {
     decks: {
       equipmentDeck: createEquipmentDeck(),
       discardEquipment: [],
+      zombieDeck: createZombieDeck(),
+      zombieDiscard: [],
     },
   };
 }

@@ -206,8 +206,8 @@ function handleEndTurn(state) {
 
   // Plus personne de vivant après nous dans l'ordre : fin de manche.
   state.phase = "zombie_turn";
-  spawnZombies(state);
-  const events = activateZombies(state);
+  const spawnEvents = spawnZombies(state);
+  const activationEvents = activateZombies(state);
   state.phase = "player_turn";
   state.round += 1;
 
@@ -218,5 +218,5 @@ function handleEndTurn(state) {
     first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
   }
 
-  return { ok: true, state, events };
+  return { ok: true, state, events: [...spawnEvents, ...activationEvents] };
 }

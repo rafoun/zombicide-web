@@ -37,20 +37,33 @@ export function createEquipmentDeck() {
   return shuffle(EQUIPMENT_CARDS.map((card) => ({ ...card })));
 }
 
-// Table de spawn simplifiée par niveau de danger (bleu/jaune/orange/rouge),
-// inspirée des vraies cartes zombies qui font apparaître plus (et de plus
-// dangereux) zombies au fil de la partie.
-export const SPAWN_TABLE = {
-  blue: [{ type: "walker", count: 1 }],
-  yellow: [{ type: "walker", count: 2 }, { type: "runner", count: 1 }],
-  orange: [{ type: "walker", count: 4 }, { type: "runner", count: 1 }, { type: "brute", count: 1 }],
-  red: [
-    { type: "walker", count: 6 },
-    { type: "runner", count: 2 },
-    { type: "brute", count: 2 },
-    { type: "abomination", count: 1 },
-  ],
+// Paquet de cartes Zombies (p. 25 du livret) : à chaque Manche, on pioche
+// UNE carte par Zone de Spawn active (pas toute une table d'un coup), et la
+// carte indique combien de Zombies apparaissent selon le Niveau de Danger le
+// plus haut parmi les Survivants. Exemple donné tel quel par le livret pour
+// le Marcheur : Bleu 1 / Jaune 2 / Orange 4 / Rouge 6 Marcheurs (p. 25).
+// Le contenu exact des 40 cartes physiques (Coureur/Brute/Abomination) n'est
+// pas imprimé dans les règles (c'est sur les cartes elles-mêmes) : on
+// reconstruit un paquet dans le même esprit et à peu près dans les mêmes
+// proportions que les figurines fournies avec la boîte (40 Marcheurs,
+// 16 Coureurs, 16 Brutes, 4 Abominations, p. 3).
+export const ZOMBIE_CARD_COUNTS = {
+  walker: { blue: 1, yellow: 2, orange: 4, red: 6 },
+  runner: { blue: 0, yellow: 1, orange: 2, red: 3 },
+  brute: { blue: 0, yellow: 0, orange: 1, red: 2 },
 };
+
+export function createZombieDeck() {
+  const cards = [];
+  for (let i = 0; i < 12; i++) cards.push({ type: "walker", counts: ZOMBIE_CARD_COUNTS.walker });
+  for (let i = 0; i < 4; i++) cards.push({ type: "runner", counts: ZOMBIE_CARD_COUNTS.runner });
+  for (let i = 0; i < 3; i++) cards.push({ type: "brute", counts: ZOMBIE_CARD_COUNTS.brute });
+  // Carte Abomination : pas de table par Niveau de Danger (p. 17) — elle fait
+  // toujours apparaître 1 Abomination, ou donne une Activation
+  // supplémentaire à celle déjà présente s'il y en a déjà une sur le plateau.
+  cards.push({ type: "abomination" });
+  return shuffle(cards);
+}
 
 // Seuils de Points d'Adrénaline pour passer au niveau de danger suivant
 // (repris tels quels du livret de règles).
