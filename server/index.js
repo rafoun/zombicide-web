@@ -91,6 +91,9 @@ io.on("connection", (socket) => {
     const result = applyAction(room.game, socket.id, action);
     if (result.ok) {
       io.to(room.code).emit("game_state", room.game);
+      if (result.events?.length) {
+        io.to(room.code).emit("game_log", result.events);
+      }
     }
     callback?.(result.ok ? { ok: true } : { ok: false, error: result.error });
   });

@@ -1,7 +1,7 @@
 const CELL_SIZE = 64;
 
-export default function Board({ gameState, mySocketId, onMoveTo }) {
-  const { board, characters, turnOrder, currentTurnIndex, round } = gameState;
+export default function Board({ gameState, mySocketId, onMoveTo, onAttack }) {
+  const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
   const isMyTurn = currentPlayerId === mySocketId;
   const myCharacter = characters.find((c) => c.playerId === mySocketId);
@@ -11,10 +11,20 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
   }
 
+  function zombieAt(x, y) {
+    return zombies.find((z) => z.position.x === x && z.position.y === y);
+  }
+
   function handleCellClick(x, y) {
     if (!isMyTurn || !myCharacter) return;
     if (!isAdjacent(myCharacter.position, { x, y })) return;
-    onMoveTo(x, y);
+
+    const zombie = zombieAt(x, y);
+    if (zombie) {
+      onAttack(zombie.id);
+    } else {
+      onMoveTo(x, y);
+    }
   }
 
   return (
@@ -38,6 +48,7 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
           const py = cell.y * CELL_SIZE;
           const clickable =
             isMyTurn && myCharacter && isAdjacent(myCharacter.position, cell);
+          const hasZombie = Boolean(zombieAt(cell.x, cell.y));
 
           return (
             <g key={`${cell.x}-${cell.y}`}>
@@ -56,7 +67,9 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
                   y={py + 3}
                   width={CELL_SIZE - 6}
                   height={CELL_SIZE - 6}
-                  className="board-cell__highlight"
+                  className={`board-cell__highlight ${
+                    hasZombie ? "board-cell__highlight--attack" : ""
+                  }`}
                   pointerEvents="none"
                 />
               )}
@@ -88,6 +101,21 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
           );
         })}
 
+        {zombies.map((z) => (
+          <g key={z.id}>
+            <rect
+              x={z.position.x * CELL_SIZE + CELL_SIZE / 2 - 12}
+              y={z.position.y * CELL_SIZE + CELL_SIZE / 2 - 12}
+              width={24}
+              height={24}
+              className="zombie-token"
+              transform={`rotate(45 ${z.position.x * CELL_SIZE + CELL_SIZE / 2} ${
+                z.position.y * CELL_SIZE + CELL_SIZE / 2
+              })`}
+            />
+          </g>
+        ))}
+
         {characters.map((c) => (
           <g key={c.playerId}>
             <circle
@@ -96,7 +124,7 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
               r={CELL_SIZE / 3.2}
               className={`character-token ${
                 c.playerId === mySocketId ? "character-token--me" : ""
-              }`}
+              } ${c.woundLevel === "dead" ? "character-token--dead" : ""}`}
             />
             <text
               x={c.position.x * CELL_SIZE + CELL_SIZE / 2}

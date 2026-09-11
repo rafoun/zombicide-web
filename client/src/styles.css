@@ -188,9 +188,46 @@ button:disabled {
   stroke-width: 2;
 }
 
+.board-cell__highlight--attack {
+  stroke: var(--blood-bright);
+}
+
 .board-wall {
   stroke: var(--bone-dim);
   stroke-width: 3;
+}
+
+.zombie-token {
+  fill: var(--toxic);
+  stroke: #0a0908;
+  stroke-width: 2;
+}
+
+.character-token--dead {
+  fill: #444 !important;
+  opacity: 0.6;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.event-log {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--bone-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.event-log__line {
+  margin: 0;
 }
 
 .character-token {

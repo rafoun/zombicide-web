@@ -3,23 +3,29 @@ import { socket } from "./socket.js";
 import Board from "./Board.jsx";
 import PlayerPanel from "./PlayerPanel.jsx";
 import InventoryPanel from "./InventoryPanel.jsx";
+import EventLog from "./EventLog.jsx";
 
 export default function App() {
   const [name, setName] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [room, setRoom] = useState(null);
   const [gameState, setGameState] = useState(null);
+  const [logMessages, setLogMessages] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
     socket.on("game_started", (state) => setGameState(state));
     socket.on("game_state", (state) => setGameState(state));
+    socket.on("game_log", (messages) => {
+      setLogMessages((prev) => [...prev, ...messages].slice(-6));
+    });
 
     return () => {
       socket.off("room_update");
       socket.off("game_started");
       socket.off("game_state");
+      socket.off("game_log");
     };
   }, []);
 
@@ -71,8 +77,12 @@ export default function App() {
           gameState={gameState}
           mySocketId={socket.id}
           onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
+          onAttack={(zombieId) => socket.emit("game_action", { type: "attack", zombieId })}
         />
-        <InventoryPanel equipment={myCharacter?.equipment || []} />
+        <div className="right-column">
+          <InventoryPanel equipment={myCharacter?.equipment || []} />
+          <EventLog messages={logMessages} />
+        </div>
       </div>
     );
   }

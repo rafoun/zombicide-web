@@ -26,3 +26,13 @@ export function shuffle(array) {
 export function createEquipmentDeck() {
   return shuffle(EQUIPMENT_CARDS.map((card) => ({ ...card })));
 }
+
+// Nombre de zombies qui apparaissent à chaque phase zombie, selon le niveau
+// de danger (bleu -> jaune -> orange -> rouge), comme dans le vrai jeu où la
+// pioche zombie grossit avec le danger.
+export const ZOMBIE_SPAWN_COUNT = {
+  blue: 2,
+  yellow: 3,
+  orange: 4,
+  red: 5,
+};
