@@ -1,4 +1,4 @@
-import { canMove } from "./board.js";
+import { canMove, getDoorBetween } from "./board.js";
 import { shuffle, maxActionsForAdrenaline } from "./decks.js";
 import { spawnZombies, activateZombies, ZOMBIE_TYPES } from "./zombies.js";
 import { checkGameEnd } from "./scenarios.js";
@@ -14,7 +14,9 @@ export function applyAction(state, playerSocketId, action) {
   if (action.type === "move") result = handleMove(state, playerSocketId, action);
   else if (action.type === "end_turn") result = handleEndTurn(state);
   else if (action.type === "search") result = handleSearch(state, playerSocketId);
-  else if (action.type === "attack") result = handleAttack(state, playerSocketId);
+  else if (action.type === "attack") result = handleAttack(state, playerSocketId, action);
+  else if (action.type === "force_door") result = handleForceDoor(state, playerSocketId, action);
+  else if (action.type === "use_item") result = handleUseItem(state, playerSocketId, action);
   else return { ok: false, error: `Action inconnue : ${action.type}` };
 
   if (result.ok) {
@@ -78,6 +80,49 @@ function handleSearch(state, playerSocketId) {
   return { ok: true, state };
 }
 
+// Le Survivor force une porte verrouillée avec son Pied de biche (livret
+// p. 19 : "No roll is required"). L'Action ne fait qu'ouvrir la porte, il
+// faut ensuite une Action de Déplacement séparée pour la franchir.
+function handleForceDoor(state, playerSocketId, action) {
+  const character = getCharacter(state, playerSocketId);
+  if (!character || character.dead) return { ok: false, error: "Personnage indisponible." };
+  if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
+
+  const target = { x: action.x, y: action.y };
+  const door = getDoorBetween(state.board, character.position, target);
+  if (!door) return { ok: false, error: "Pas de porte ici." };
+  if (!door.locked) return { ok: false, error: "Cette porte n'est pas verrouillée." };
+
+  const hasCrowbar = character.equipment.some((e) => e.effect === "open_door");
+  if (!hasCrowbar) return { ok: false, error: "Il te faut un Pied de biche pour forcer une porte verrouillée." };
+
+  door.locked = false;
+  character.actionsLeft -= 1;
+  return { ok: true, state, events: [`${character.name} force une porte verrouillée avec son Pied de biche.`] };
+}
+
+// Utilisation d'un objet non-arme de l'inventaire (pour l'instant, seule la
+// Trousse de secours a un effet : soigne 1 blessure, à usage unique).
+function handleUseItem(state, playerSocketId, action) {
+  const character = getCharacter(state, playerSocketId);
+  if (!character || character.dead) return { ok: false, error: "Personnage indisponible." };
+  if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
+
+  const itemIndex = character.equipment.findIndex((e) => e.id === action.itemId);
+  if (itemIndex === -1) return { ok: false, error: "Cet objet n'est pas dans ton inventaire." };
+  const item = character.equipment[itemIndex];
+
+  if (item.effect === "heal") {
+    if (character.wounds <= 0) return { ok: false, error: "Aucune blessure à soigner." };
+    character.wounds -= 1;
+    character.equipment.splice(itemIndex, 1); // à usage unique, consommée
+    character.actionsLeft -= 1;
+    return { ok: true, state, events: [`${character.name} utilise une Trousse de secours (-1 blessure).`] };
+  }
+
+  return { ok: false, error: "Cet objet ne peut pas être utilisé directement." };
+}
+
 // Ordre de priorité des cibles (règle du Tir à distance uniquement, p. 27) :
 // 1) Brute/Abomination  2) Marcheur  3) Coureur
 const TARGETING_PRIORITY = ["brute", "abomination", "walker", "runner"];
@@ -114,7 +159,7 @@ function woundCharacter(character, amount, events, reason) {
   }
 }
 
-function handleAttack(state, playerSocketId) {
+function handleAttack(state, playerSocketId, action) {
   const character = getCharacter(state, playerSocketId);
   if (!character || character.dead) return { ok: false, error: "Personnage indisponible." };
   if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
@@ -124,7 +169,17 @@ function handleAttack(state, playerSocketId) {
   );
   if (zombiesHere.length === 0) return { ok: false, error: "Aucun zombie dans ta zone." };
 
-  const weapon = character.equipment.find((e) => e.type === "weapon");
+  // Le joueur choisit son arme s'il en a plusieurs (action.weaponId). Sans
+  // précision, ou si le Survivant n'a aucune arme, il attaque à mains nues.
+  const weapons = character.equipment.filter((e) => e.type === "weapon");
+  let weapon = null;
+  if (action.weaponId) {
+    weapon = weapons.find((w) => w.id === action.weaponId);
+    if (!weapon) return { ok: false, error: "Cette arme n'est pas dans ton inventaire." };
+  } else {
+    weapon = weapons[0] || null;
+  }
+
   const dice = weapon ? weapon.dice : 1;
   const accuracy = weapon ? weapon.accuracy : 4;
   const damage = weapon ? weapon.damage : 1;

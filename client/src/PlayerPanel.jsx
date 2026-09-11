@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const DANGER_THRESHOLDS = { blue: 0, yellow: 7, orange: 19, red: 43 };
 
 function dangerLevel(adrenaline) {
@@ -19,11 +21,19 @@ function zombieSummary(zombiesHere) {
     .join(", ");
 }
 
-export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch, onAttack, onEndTurn, mission }) {
+export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch, onAttack, onUseItem, onEndTurn, mission }) {
+  const weapons = character?.equipment.filter((e) => e.type === "weapon") || [];
+  const [selectedWeaponId, setSelectedWeaponId] = useState(null);
+
   if (!character) return null;
 
   const woundIndex = character.dead ? 3 : character.wounds; // 0,1,2 blessures -> index ; mort -> 3
   const level = dangerLevel(character.adrenaline);
+
+  // Arme sélectionnée : celle choisie par le joueur si elle est toujours dans
+  // l'inventaire, sinon la première trouvée, sinon mains nues.
+  const activeWeapon = weapons.find((w) => w.id === selectedWeaponId) || weapons[0] || null;
+  const healKit = character.equipment.find((e) => e.effect === "heal");
 
   return (
     <aside className="player-panel">
@@ -73,9 +83,31 @@ export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch
           {!character.dead && zombiesHere.length > 0 && (
             <p className="zombies-here">Zombies ici : {zombieSummary(zombiesHere)}</p>
           )}
-          {!character.dead && character.actionsLeft > 0 && zombiesHere.length > 0 && (
-            <button onClick={onAttack}>Attaquer (mêlée)</button>
+
+          {!character.dead && zombiesHere.length > 0 && weapons.length > 1 && (
+            <select
+              className="weapon-select"
+              value={activeWeapon?.id || ""}
+              onChange={(e) => setSelectedWeaponId(e.target.value)}
+            >
+              {weapons.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({w.mode === "ranged" ? "distance" : "mêlée"}, Dégât {w.damage})
+                </option>
+              ))}
+            </select>
           )}
+
+          {!character.dead && character.actionsLeft > 0 && zombiesHere.length > 0 && (
+            <button onClick={() => onAttack(activeWeapon?.id)}>
+              Attaquer {activeWeapon ? `(${activeWeapon.name}, ${activeWeapon.mode === "ranged" ? "distance" : "mêlée"})` : "(mains nues)"}
+            </button>
+          )}
+
+          {!character.dead && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
+            <button onClick={() => onUseItem(healKit.id)}>Utiliser la Trousse de secours (-1 blessure)</button>
+          )}
+
           {!character.dead && character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
           <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>
         </div>

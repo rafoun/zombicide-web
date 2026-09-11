@@ -7,7 +7,7 @@
 const DELTA = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
 const OPPOSITE = { north: "south", south: "north", east: "west", west: "east" };
 
-function getCell(board, x, y) {
+export function getCell(board, x, y) {
   if (x < 0 || y < 0 || x >= board.width || y >= board.height) return null;
   return board.cells[y * board.width + x];
 }
@@ -277,6 +277,20 @@ export function canMove(board, from, to) {
 export function getZone(board, x, y) {
   const cell = getCell(board, x, y);
   return cell ? board.zones[cell.zoneId] : null;
+}
+
+// Renvoie l'objet Porte entre 2 cases adjacentes (même référence des deux
+// côtés, donc la modifier met à jour les 2 cases d'un coup), ou null s'il n'y
+// a pas de porte à cet endroit (mur plein ou passage libre).
+export function getDoorBetween(board, from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) + Math.abs(dy) !== 1) return null;
+  const fromCell = getCell(board, from.x, from.y);
+  if (!fromCell) return null;
+  const side = dx === 1 ? "east" : dx === -1 ? "west" : dy === 1 ? "south" : "north";
+  const wall = fromCell.walls[side];
+  return wall && wall.door ? wall : null;
 }
 
 export function startingPositions(board, count) {

@@ -152,6 +152,10 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 
 .player-panel__actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.5rem; }
 .zombies-here { margin: 0; font-size: 0.8rem; color: var(--bone-dim); font-family: var(--font-mono); }
+.weapon-select {
+  background: var(--panel-bg); color: var(--bone); border: 1px solid var(--panel-border);
+  border-radius: 2px; padding: 0.4rem; font-family: var(--font-mono); font-size: 0.8rem;
+}
 
 .inventory-panel__title { font-size: 1.1rem; }
 .inventory-panel__empty { font-size: 0.9rem; color: var(--bone-dim); font-style: italic; }

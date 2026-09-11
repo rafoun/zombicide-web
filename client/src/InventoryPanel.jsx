@@ -1,3 +1,8 @@
+const EFFECT_LABEL = {
+  heal: "Soigne 1 blessure (bouton dédié pendant ton tour)",
+  open_door: "Force les portes verrouillées (clique dessus sur le plateau)",
+};
+
 function ItemStats({ card }) {
   if (card.type === "weapon") {
     return (
@@ -11,7 +16,7 @@ function ItemStats({ card }) {
   }
   return (
     <dl className="item-stats">
-      <div><dt>Effet</dt><dd>{card.effect}</dd></div>
+      <div><dt>Effet</dt><dd>{EFFECT_LABEL[card.effect] || card.effect}</dd></div>
     </dl>
   );
 }

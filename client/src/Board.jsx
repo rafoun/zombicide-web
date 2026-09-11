@@ -18,7 +18,7 @@ const ZOMBIE_DISPLAY = {
   abomination: { letter: "A", size: 14 },
 };
 
-export default function Board({ gameState, mySocketId, onMoveTo }) {
+export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) {
   const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
   const isMyTurn = currentPlayerId === mySocketId;
@@ -29,9 +29,27 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
   }
 
+  function cellAt(x, y) {
+    return board.cells.find((c) => c.x === x && c.y === y);
+  }
+
+  // Renvoie ce qu'il y a entre 2 cases adjacentes : true (mur infranchissable),
+  // un objet Porte ({door, locked, color}), ou rien (passage libre).
+  function wallBetween(from, to) {
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const side = dx === 1 ? "east" : dx === -1 ? "west" : dy === 1 ? "south" : "north";
+    return cellAt(from.x, from.y)?.walls[side];
+  }
+
   function handleCellClick(x, y) {
     if (!isMyTurn || !myCharacter || myCharacter.dead) return;
     if (!isAdjacent(myCharacter.position, { x, y })) return;
+    const wall = wallBetween(myCharacter.position, { x, y });
+    if (wall === true) return; // mur infranchissable, rien à faire ici
+    if (wall && wall.door && wall.locked) {
+      onForceDoor(x, y); // porte verrouillée : on tente de la forcer (pied de biche)
+      return;
+    }
     onMoveTo(x, y);
   }
 
@@ -79,7 +97,8 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
         {board.cells.map((cell) => {
           const px = cell.x * CELL_SIZE;
           const py = cell.y * CELL_SIZE;
-          const clickable = isMyTurn && myCharacter && !myCharacter.dead && isAdjacent(myCharacter.position, cell);
+          const blockedByWall = myCharacter && wallBetween(myCharacter.position, cell) === true;
+          const clickable = isMyTurn && myCharacter && !myCharacter.dead && isAdjacent(myCharacter.position, cell) && !blockedByWall;
 
           let cellClass = cell.building ? "board-cell--building" : "board-cell--street";
           if (cell.isSpawnZone) cellClass += " board-cell--spawn";

@@ -108,7 +108,8 @@ export default function App() {
           isMyTurn={isMyTurn}
           zombiesHere={zombiesHere}
           onSearch={() => socket.emit("game_action", { type: "search" })}
-          onAttack={() => socket.emit("game_action", { type: "attack" })}
+          onAttack={(weaponId) => socket.emit("game_action", { type: "attack", weaponId })}
+          onUseItem={(itemId) => socket.emit("game_action", { type: "use_item", itemId })}
           onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
           mission={mission}
         />
@@ -116,6 +117,7 @@ export default function App() {
           gameState={gameState}
           mySocketId={socket.id}
           onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
+          onForceDoor={(x, y) => socket.emit("game_action", { type: "force_door", x, y })}
         />
         <div className="right-column">
           <InventoryPanel equipment={myCharacter?.equipment || []} />
