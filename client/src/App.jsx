@@ -4,7 +4,24 @@ import Board from "./Board.jsx";
 import PlayerPanel from "./PlayerPanel.jsx";
 import InventoryPanel from "./InventoryPanel.jsx";
 import EventLog from "./EventLog.jsx";
-import GameOverScreen from "./GameOverScreen.jsx";
+
+function missionProgress(gameState) {
+  const alive = gameState.characters.filter((c) => !c.dead);
+  if (gameState.scenarioObjective === "collect_and_exit") {
+    const remaining = gameState.board.cells.filter((c) => c.objective).length;
+    const taken = gameState.totalObjectives - remaining;
+    return `Objectifs : ${taken}/${gameState.totalObjectives} — puis rejoindre la Sortie`;
+  }
+  if (gameState.scenarioObjective === "arm_and_exit") {
+    const armed = alive.filter((c) => c.equipment.some((e) => e.type === "weapon")).length;
+    return `Survivants armés : ${armed}/${alive.length} — puis rejoindre la Sortie`;
+  }
+  if (gameState.scenarioObjective === "reach_danger_level") {
+    const best = Math.max(0, ...alive.map((c) => c.adrenaline));
+    return `Meilleure Adrénaline : ${best}/43 PA (Niveau Rouge)`;
+  }
+  return "";
+}
 
 export default function App() {
   const [name, setName] = useState("");
@@ -57,11 +74,16 @@ export default function App() {
     socket.emit("start_game");
   }
 
-  const isHost = room && socket.id === room.hostSocketId;
-
-  if (gameState && gameState.phase === "game_over") {
-    return <GameOverScreen gameState={gameState} />;
+  function handleSelectScenario(scenarioId) {
+    socket.emit("select_scenario", { scenarioId });
   }
+
+  function handlePlayAgain() {
+    setGameState(null);
+    setLogMessages([]);
+  }
+
+  const isHost = room && socket.id === room.hostSocketId;
 
   if (gameState) {
     const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
@@ -70,9 +92,17 @@ export default function App() {
     const hasZombiesHere = myCharacter
       ? gameState.zombies.some((z) => z.position.x === myCharacter.position.x && z.position.y === myCharacter.position.y)
       : false;
+    const mission = { name: gameState.scenarioName, progress: missionProgress(gameState) };
 
     return (
       <div className="game-layout">
+        {gameState.phase === "game_over" && (
+          <div className={`game-over-banner game-over-banner--${gameState.gameOver?.result}`}>
+            <strong>{gameState.gameOver?.result === "won" ? "Victoire !" : "Défaite..."}</strong>
+            <span>{gameState.gameOver?.reason}</span>
+            {isHost && <button onClick={handlePlayAgain}>Retour au salon</button>}
+          </div>
+        )}
         <PlayerPanel
           character={myCharacter}
           isMyTurn={isMyTurn}
@@ -80,6 +110,7 @@ export default function App() {
           onSearch={() => socket.emit("game_action", { type: "search" })}
           onAttack={() => socket.emit("game_action", { type: "attack" })}
           onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
+          mission={mission}
         />
         <Board
           gameState={gameState}
@@ -95,17 +126,45 @@ export default function App() {
   }
 
   if (room) {
+    const scenarios = room.scenarios || [];
+    const selectedScenario = scenarios.find((s) => s.id === room.scenarioId) || scenarios[0];
+
     return (
-      <div className="app">
+      <div className="app app--lobby">
         <h1>Salon {room.code}</h1>
         <p>Partage ce code à tes amis pour qu'ils rejoignent.</p>
         <ul>{room.players.map((p, i) => <li key={i}>{p.name}</li>)}</ul>
+
+        <h2>Scénario</h2>
+        <div className="scenario-list">
+          {scenarios.map((s) => (
+            <button
+              key={s.id}
+              className={`scenario-card ${s.id === room.scenarioId ? "scenario-card--selected" : ""}`}
+              disabled={!isHost}
+              onClick={() => handleSelectScenario(s.id)}
+            >
+              <div className="scenario-card__header">
+                <span className="scenario-card__name">{s.name}</span>
+                <span className="scenario-card__meta">{s.difficulty} · {s.time}</span>
+              </div>
+              <p className="scenario-card__flavor">{s.flavor}</p>
+            </button>
+          ))}
+        </div>
+
+        {selectedScenario && (
+          <ul className="scenario-rules">
+            {selectedScenario.specialRules.map((rule, i) => <li key={i}>{rule}</li>)}
+          </ul>
+        )}
+
         {isHost ? (
           <button disabled={room.players.length < 2} onClick={handleStartGame}>
             Lancer la partie ({room.players.length}/8)
           </button>
         ) : (
-          <p>En attente que l'hôte lance la partie...</p>
+          <p>En attente que l'hôte choisisse un scénario et lance la partie...</p>
         )}
       </div>
     );

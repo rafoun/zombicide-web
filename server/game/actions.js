@@ -1,6 +1,7 @@
 import { canMove } from "./board.js";
 import { shuffle, maxActionsForAdrenaline } from "./decks.js";
 import { spawnZombies, activateZombies, ZOMBIE_TYPES } from "./zombies.js";
+import { checkGameEnd } from "./scenarios.js";
 
 export function applyAction(state, playerSocketId, action) {
   if (state.phase === "game_over") return { ok: false, error: "La partie est terminée." };
@@ -9,12 +10,23 @@ export function applyAction(state, playerSocketId, action) {
   if (state.phase !== "player_turn") return { ok: false, error: "Ce n'est pas le tour des joueurs." };
   if (playerSocketId !== currentPlayerId) return { ok: false, error: "Ce n'est pas ton tour." };
 
-  if (action.type === "move") return handleMove(state, playerSocketId, action);
-  if (action.type === "end_turn") return handleEndTurn(state);
-  if (action.type === "search") return handleSearch(state, playerSocketId);
-  if (action.type === "attack") return handleAttack(state, playerSocketId);
+  let result;
+  if (action.type === "move") result = handleMove(state, playerSocketId, action);
+  else if (action.type === "end_turn") result = handleEndTurn(state);
+  else if (action.type === "search") result = handleSearch(state, playerSocketId);
+  else if (action.type === "attack") result = handleAttack(state, playerSocketId);
+  else return { ok: false, error: `Action inconnue : ${action.type}` };
 
-  return { ok: false, error: `Action inconnue : ${action.type}` };
+  if (result.ok) {
+    const outcome = checkGameEnd(state);
+    if (outcome) {
+      state.phase = "game_over";
+      state.gameOver = outcome;
+      result.events = [...(result.events || []), outcome.reason];
+    }
+  }
+
+  return result;
 }
 
 function getCharacter(state, playerSocketId) {
@@ -33,7 +45,17 @@ function handleMove(state, playerSocketId, action) {
 
   character.position = target;
   character.actionsLeft -= 1;
-  return { ok: true, state };
+
+  const events = [];
+  const cell = state.board.cells.find((c) => c.x === target.x && c.y === target.y);
+  if (cell?.objective) {
+    character.adrenaline += 5;
+    character.objectives = (character.objectives || 0) + 1;
+    events.push(`${character.name} récupère un Objectif (+5 PA).`);
+    cell.objective = null;
+  }
+
+  return { ok: true, state, events };
 }
 
 function handleSearch(state, playerSocketId) {
@@ -160,58 +182,27 @@ function handleAttack(state, playerSocketId) {
   return { ok: true, state, events };
 }
 
-function anyAlive(state) {
-  return state.characters.some((c) => !c.dead);
-}
-
-// Cherche le prochain personnage vivant à partir de `fromIndex` (inclus),
-// dans l'ordre du tour. Renvoie -1 si aucun n'est vivant jusqu'à la fin.
-function nextAliveIndex(state, fromIndex) {
-  let i = fromIndex;
-  while (i < state.characters.length && state.characters[i].dead) i++;
-  return i < state.characters.length ? i : -1;
-}
-
 function handleEndTurn(state) {
   const character = state.characters[state.currentTurnIndex];
   character.actionsLeft = 0;
 
-  // Partie perdue : plus aucun survivant. On ne cherche même plus à donner
-  // la main à quelqu'un (sinon le tour reste bloqué, cf. bug historique).
-  if (!anyAlive(state)) {
-    state.phase = "game_over";
-    return { ok: true, state, events: ["Tous les survivants sont morts. Partie terminée."] };
-  }
-
-  // On saute directement les personnages morts : jamais la main à un mort,
-  // sinon plus personne ne peut cliquer "Terminer mon tour" et la partie
-  // se bloque définitivement.
-  const nextIndex = nextAliveIndex(state, state.currentTurnIndex + 1);
-  if (nextIndex !== -1) {
-    state.currentTurnIndex = nextIndex;
-    const next = state.characters[nextIndex];
+  const isLastPlayer = state.currentTurnIndex === state.turnOrder.length - 1;
+  if (!isLastPlayer) {
+    state.currentTurnIndex += 1;
+    const next = state.characters[state.currentTurnIndex];
     next.actionsLeft = maxActionsForAdrenaline(next.adrenaline);
     return { ok: true, state };
   }
 
-  // Plus personne de vivant après nous dans l'ordre du tour : fin de manche.
-  // Phase zombie (spawn + activation), puis nouvelle manche.
+  // Dernier joueur : phase zombie (spawn + activation), puis nouvelle manche.
   state.phase = "zombie_turn";
   spawnZombies(state);
   const events = activateZombies(state);
   state.phase = "player_turn";
   state.round += 1;
-
-  if (!anyAlive(state)) {
-    state.phase = "game_over";
-    events.push("Tous les survivants sont morts. Partie terminée.");
-    return { ok: true, state, events };
-  }
-
-  const firstIndex = nextAliveIndex(state, 0);
-  state.currentTurnIndex = firstIndex;
-  const first = state.characters[firstIndex];
-  first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
+  state.currentTurnIndex = 0;
+  const first = state.characters[0];
+  if (!first.dead) first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
 
   return { ok: true, state, events };
 }

@@ -91,12 +91,7 @@ function markObjective(board, x, y, color) {
   if (cell) cell.objective = { color };
 }
 
-// Plateau 12x12 = assemblage de 4 tuiles (2x2), avec une rue en croix (2 cases
-// de large, comme les doubles voies des tuiles officielles) et 4 bâtiments
-// dans les angles, chacun divisé en 2 pièces reliées par une porte.
-export function createStarterBoard() {
-  const width = 12;
-  const height = 12;
+function emptyGrid(width, height) {
   const cells = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -112,7 +107,17 @@ export function createStarterBoard() {
       });
     }
   }
-  const board = { width, height, cells, zones: {} };
+  return { width, height, cells, zones: {} };
+}
+
+// Plateau 12x12 = assemblage de 4 tuiles (2x2), avec une rue en croix (2 cases
+// de large, comme les doubles voies des tuiles officielles) et 4 bâtiments
+// dans les angles, chacun divisé en 2 pièces reliées par une porte.
+// Inspiré de la mission M0 "Zombicide Life" du livret : quelques objectifs à
+// récupérer puis rejoindre la Sortie.
+export function createBoardCrossroads() {
+  const board = emptyGrid(12, 12);
+  const width = board.width, height = board.height;
 
   defineStreetZone(board, 0, 0, width - 1, height - 1, "street", "Rue");
 
@@ -143,8 +148,7 @@ export function createStarterBoard() {
   addDoor(board, 9, 7, "north", { color: "blue" });
   markObjective(board, 10, 9, "red"); // objectif générique, derrière la porte verrouillée
 
-  // --- Zones de spawn zombies (coins de bâtiments + extrémités de rue,
-  //     comme les icônes rouges de la légende officielle) ---
+  // --- Zones de spawn zombies (coins de bâtiments + extrémités de rue) ---
   markSpawn(board, 0, 0);
   markSpawn(board, 11, 0);
   markSpawn(board, 0, 11);
@@ -152,15 +156,105 @@ export function createStarterBoard() {
   markSpawn(board, 5, 0);
   markSpawn(board, 6, 11);
 
-  // --- Zone de départ des joueurs (icône bleue "Player starting area") ---
+  // --- Zone de départ des joueurs ---
   markStart(board, 0, 5);
   markStart(board, 0, 6);
   markStart(board, 1, 5);
   markStart(board, 1, 6);
 
-  // --- Sorties (bandes jaunes "EXIT" en bord de rue) ---
+  // --- Sorties ---
   markExit(board, 5, 11);
   markExit(board, 6, 11);
+
+  return board;
+}
+
+// Plateau 12x12 = un seul grand bâtiment central (le "centre commercial")
+// entouré d'un anneau de rue, divisé en 4 grands rayons reliés par des portes
+// ouvertes (sans clé). Inspiré de la mission M5 "Big W" : il faut s'armer
+// avant de fuir, tout le magasin est à parcourir.
+export function createBoardMall() {
+  const board = emptyGrid(12, 12);
+  const width = board.width, height = board.height;
+
+  defineStreetZone(board, 0, 0, width - 1, height - 1, "street", "Parking");
+
+  // 4 rayons du magasin (quadrants du bâtiment central 2..9 x 2..9)
+  defineRoom(board, 2, 2, 5, 5, "mall-nw", "Rayon A");
+  defineRoom(board, 6, 2, 9, 5, "mall-ne", "Rayon B");
+  defineRoom(board, 2, 6, 5, 9, "mall-sw", "Rayon C");
+  defineRoom(board, 6, 6, 9, 9, "mall-se", "Rayon D");
+
+  // Portes intérieures, toutes ouvertes (comme la règle spéciale de M5)
+  addDoor(board, 5, 3, "east", { color: "blue" });   // NW <-> NE
+  addDoor(board, 5, 7, "east", { color: "blue" });   // SW <-> SE
+  addDoor(board, 3, 5, "south", { color: "green" }); // NW <-> SW
+  addDoor(board, 7, 5, "south", { color: "green" }); // NE <-> SE
+
+  // Portes vers le parking, une par rayon
+  addDoor(board, 3, 2, "north", { color: "green" });
+  addDoor(board, 8, 2, "north", { color: "blue" });
+  addDoor(board, 3, 9, "south", { color: "green" });
+  addDoor(board, 8, 9, "south", { color: "blue" });
+
+  // Objectifs : de quoi armer toute l'équipe, dispersés dans le magasin
+  markObjective(board, 3, 3, "green");
+  markObjective(board, 8, 3, "blue");
+  markObjective(board, 3, 8, "green");
+  markObjective(board, 8, 8, "red");
+
+  // Spawn zones sur les 4 coins du parking + milieux de côtés
+  markSpawn(board, 0, 0);
+  markSpawn(board, 11, 0);
+  markSpawn(board, 0, 11);
+  markSpawn(board, 11, 11);
+  markSpawn(board, 0, 5);
+  markSpawn(board, 11, 6);
+
+  // Départ sur le parking, côté sud
+  markStart(board, 5, 11);
+  markStart(board, 6, 11);
+
+  // Sortie côté nord, à l'opposé du départ
+  markExit(board, 5, 0);
+  markExit(board, 6, 0);
+
+  return board;
+}
+
+// Plateau 12x12 très ouvert (grande avenue/parking), avec seulement 2 petits
+// bâtiments pour s'abriter et beaucoup de zones de spawn sur les longs bords.
+// Inspiré de la mission M3 "24Hrs Race" : pas de quête d'objet, il faut juste
+// tenir et monter en Adrénaline.
+export function createBoardHighway() {
+  const board = emptyGrid(12, 12);
+  const width = board.width, height = board.height;
+
+  defineStreetZone(board, 0, 0, width - 1, height - 1, "street", "Avenue");
+
+  // Deux petits abris, un de chaque côté
+  defineRoom(board, 1, 5, 2, 6, "shelter-w", "Abri Ouest");
+  addDoor(board, 2, 5, "east", { color: "green" });
+
+  defineRoom(board, 9, 5, 10, 6, "shelter-e", "Abri Est");
+  addDoor(board, 9, 5, "west", { color: "blue" });
+
+  markObjective(board, 1, 5, "green");
+  markObjective(board, 10, 6, "blue");
+
+  // Beaucoup de zones de spawn le long des bords nord et sud (pression max)
+  for (const x of [1, 3, 5, 6, 8, 10]) markSpawn(board, x, 0);
+  for (const x of [1, 3, 5, 6, 8, 10]) markSpawn(board, x, 11);
+
+  // Départ au centre de l'avenue
+  markStart(board, 5, 6);
+  markStart(board, 6, 6);
+  markStart(board, 5, 5);
+  markStart(board, 6, 5);
+
+  // Sortie latérale, au cas où l'équipe préfère fuir plutôt que tenir
+  markExit(board, 0, 6);
+  markExit(board, 11, 6);
 
   return board;
 }

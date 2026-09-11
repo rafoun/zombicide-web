@@ -10,11 +10,12 @@ zombicide-web/
   server/
     index.js            Salons (lobby), Socket.io, dispatch des actions
     game/
-      board.js           Grille de zones, murs, calcul de déplacement
+      board.js           3 plateaux (rues/bâtiments/portes/spawn), calcul de déplacement
+      scenarios.js       3 scénarios jouables (plateau + condition de victoire/défaite)
       decks.js           Cartes équipement, table de spawn, seuils d'adrénaline
       zombies.js         IA zombie (spawn + activation) fidèle au livret de règles
-      actions.js         Déplacement, fouille, combat (dés/précision/dégâts, priorité des cibles)
-      state.js           État de partie initial
+      actions.js         Déplacement, fouille, combat, ramassage d'objectifs, fin de partie
+      state.js           État de partie initial (selon le scénario choisi)
   client/
     src/
       App.jsx            Lobby + orchestration de l'écran de jeu (3 colonnes)
@@ -46,6 +47,23 @@ zombicide-web/
   sans jet de dé) ; sinon il avance d'une case vers le survivant le plus
   proche (calcul de chemin) ; les Coureurs ont 2 Actions par activation.
 
+## Scénarios (inspirés du livret, p. 35 et suivantes)
+
+L'hôte du salon choisit un scénario avant de lancer la partie ; chacun a son
+propre plateau et sa propre condition de victoire :
+
+- **Le carrefour** (inspiré de M0 "Zombicide Life") : récupérer les 3
+  Objectifs puis rejoindre la Sortie avec toute l'équipe vivante.
+- **Panique au centre commercial** (inspiré de M5 "Big W") : chaque Survivant
+  vivant doit être armé, puis rejoindre la Sortie.
+- **La nuit la plus longue** (inspiré de M3 "24Hrs Race") : pas de Sortie
+  obligatoire, il faut faire monter un Survivant au Niveau de Danger Rouge
+  (43 PA) pour gagner.
+
+Dans tous les cas, la partie est perdue si tous les Survivants meurent. Les
+Objectifs sont ramassés automatiquement en se déplaçant sur leur case (+5 PA,
+comme la règle officielle).
+
 ## Simplifications volontaires (v1)
 
 - Une seule tuile de plateau (pas encore plusieurs tuiles à assembler).
@@ -56,7 +74,12 @@ zombicide-web/
 - En mêlée, les touches sont réparties automatiquement en maximisant les
   éliminations plutôt que laissées au libre choix du joueur (le livret laisse
   le joueur choisir librement en mêlée, sans Ordre de Priorité imposé).
-- Pas de scénarios/objectifs de mission : mode "survie" libre.
+- Pas de scénarios "à étapes" (objectifs à accomplir dans un ordre précis,
+  comme M2 "arme d'abord, puis sors") : on garde ici des conditions simples
+  et indépendantes (tout ramasser, tout armer, ou monter en Adrénaline).
+- Pas de voitures, d'Armes Épiques séparées, ni de cartes Nourriture (les
+  scénarios inspirés de missions officielles utilisant ces éléments ont été
+  adaptés sans eux).
 
 ## Lancer en local
 

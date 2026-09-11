@@ -9,7 +9,7 @@ function dangerLevel(adrenaline) {
 
 const WOUND_TRACK = ["blue", "yellow", "orange", "red"]; // red = mort (3e blessure)
 
-export default function PlayerPanel({ character, isMyTurn, hasZombiesHere, onSearch, onAttack, onEndTurn }) {
+export default function PlayerPanel({ character, isMyTurn, hasZombiesHere, onSearch, onAttack, onEndTurn, mission }) {
   if (!character) return null;
 
   const woundIndex = character.dead ? 3 : character.wounds; // 0,1,2 blessures -> index ; mort -> 3
@@ -17,6 +17,13 @@ export default function PlayerPanel({ character, isMyTurn, hasZombiesHere, onSea
 
   return (
     <aside className="player-panel">
+      {mission && (
+        <div className="mission-box">
+          <span className="mission-box__name">{mission.name}</span>
+          <span className="mission-box__progress">{mission.progress}</span>
+        </div>
+      )}
+
       <h2 className="player-panel__name">{character.name}</h2>
       {character.dead && <p className="dead-label">Éliminé</p>}
 

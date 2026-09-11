@@ -1,13 +1,20 @@
-import { createStarterBoard, startingPositions } from "./board.js";
+import { startingPositions } from "./board.js";
 import { createEquipmentDeck, maxActionsForAdrenaline } from "./decks.js";
+import { getScenario } from "./scenarios.js";
 
-export function createInitialGameState(players) {
-  const board = createStarterBoard();
+export function createInitialGameState(players, scenarioId) {
+  const scenario = getScenario(scenarioId);
+  const board = scenario.boardFactory();
   const positions = startingPositions(board, players.length);
 
   return {
     round: 1,
     phase: "player_turn",
+    scenarioId: scenario.id,
+    scenarioName: scenario.name,
+    scenarioObjective: scenario.objective,
+    gameOver: null,
+    totalObjectives: board.cells.filter((c) => c.objective).length,
     board,
     turnOrder: players.map((p) => p.socketId),
     currentTurnIndex: 0,
@@ -21,6 +28,7 @@ export function createInitialGameState(players) {
       equipment: [],
       actionsLeft: maxActionsForAdrenaline(0),
       zombieKills: 0,
+      objectives: 0,
     })),
     zombies: [], // { id, type, position }
     decks: {

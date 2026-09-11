@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { customAlphabet } from "nanoid";
 import { createInitialGameState } from "./game/state.js";
 import { applyAction } from "./game/actions.js";
+import { scenarioSummaries, SCENARIOS } from "./game/scenarios.js";
 
 const nanoid = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 5);
 
@@ -23,6 +24,8 @@ function roomSummary(room) {
     hostSocketId: room.hostSocketId,
     status: room.status,
     players: room.players.map((p) => ({ name: p.name })),
+    scenarioId: room.scenarioId,
+    scenarios: scenarioSummaries(),
   };
 }
 
@@ -40,6 +43,7 @@ io.on("connection", (socket) => {
       hostSocketId: socket.id,
       players: [{ socketId: socket.id, name }],
       status: "lobby",
+      scenarioId: SCENARIOS[0].id,
       game: null,
     };
     rooms.set(code, room);
@@ -61,13 +65,21 @@ io.on("connection", (socket) => {
     callback({ ok: true, room: roomSummary(room) });
   });
 
+  socket.on("select_scenario", ({ scenarioId }) => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostSocketId !== socket.id || room.status !== "lobby") return;
+    if (!SCENARIOS.some((s) => s.id === scenarioId)) return;
+    room.scenarioId = scenarioId;
+    broadcastRoom(room);
+  });
+
   socket.on("start_game", () => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostSocketId !== socket.id) return;
     if (room.players.length < 2) return;
 
     room.status = "playing";
-    room.game = createInitialGameState(room.players);
+    room.game = createInitialGameState(room.players, room.scenarioId);
     io.to(room.code).emit("game_started", room.game);
     broadcastRoom(room);
   });
