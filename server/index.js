@@ -4,7 +4,6 @@ import { Server } from "socket.io";
 import { customAlphabet } from "nanoid";
 import { createInitialGameState } from "./game/state.js";
 import { applyAction } from "./game/actions.js";
-const ZombicideGame = require('./game/zombicideEngine');
 
 const nanoid = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 5);
 
