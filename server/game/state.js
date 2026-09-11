@@ -3,7 +3,7 @@ import { createEquipmentDeck, maxActionsForAdrenaline } from "./decks.js";
 
 export function createInitialGameState(players) {
   const board = createStarterBoard();
-  const positions = startingPositions(players.length);
+  const positions = startingPositions(board, players.length);
 
   return {
     round: 1,

@@ -1,4 +1,6 @@
-const CELL_SIZE = 64;
+const CELL_SIZE = 48;
+
+const DOOR_COLOR = { green: "#4f8f3f", blue: "#2f5d8a", red: "#a1272c" };
 
 export default function Board({ gameState, mySocketId, onMoveTo }) {
   const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
@@ -19,6 +21,16 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
 
   function zombiesAt(x, y) {
     return zombies.filter((z) => z.position.x === x && z.position.y === y);
+  }
+
+  // Un seul segment de mur/porte par frontière (évite de dessiner deux fois
+  // la même limite en la parcourant depuis chaque case voisine).
+  const boundaries = [];
+  for (const cell of board.cells) {
+    if (cell.walls.south) boundaries.push({ cell, side: "south", value: cell.walls.south });
+    if (cell.walls.east) boundaries.push({ cell, side: "east", value: cell.walls.east });
+    if (cell.y === 0 && cell.walls.north) boundaries.push({ cell, side: "north", value: cell.walls.north });
+    if (cell.x === 0 && cell.walls.west) boundaries.push({ cell, side: "west", value: cell.walls.west });
   }
 
   return (
@@ -42,11 +54,16 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
           const py = cell.y * CELL_SIZE;
           const clickable = isMyTurn && myCharacter && !myCharacter.dead && isAdjacent(myCharacter.position, cell);
 
+          let cellClass = cell.building ? "board-cell--building" : "board-cell--street";
+          if (cell.isSpawnZone) cellClass += " board-cell--spawn";
+          if (cell.isStartZone) cellClass += " board-cell--start";
+          if (cell.isExit) cellClass += " board-cell--exit";
+
           return (
             <g key={`${cell.x}-${cell.y}`}>
               <rect
                 x={px} y={py} width={CELL_SIZE} height={CELL_SIZE}
-                className={`board-cell ${cell.isSpawnZone ? "board-cell--spawn" : ""}`}
+                className={`board-cell ${cellClass}`}
                 onClick={() => handleCellClick(cell.x, cell.y)}
                 style={{ cursor: clickable ? "pointer" : "default" }}
               />
@@ -54,11 +71,53 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
                 <rect x={px + 3} y={py + 3} width={CELL_SIZE - 6} height={CELL_SIZE - 6}
                   className="board-cell__highlight" pointerEvents="none" />
               )}
-              {cell.walls.north && <line x1={px} y1={py} x2={px + CELL_SIZE} y2={py} className="board-wall" />}
-              {cell.walls.south && <line x1={px} y1={py + CELL_SIZE} x2={px + CELL_SIZE} y2={py + CELL_SIZE} className="board-wall" />}
-              {cell.walls.west && <line x1={px} y1={py} x2={px} y2={py + CELL_SIZE} className="board-wall" />}
-              {cell.walls.east && <line x1={px + CELL_SIZE} y1={py} x2={px + CELL_SIZE} y2={py + CELL_SIZE} className="board-wall" />}
+
+              {cell.isExit && (
+                <text x={px + CELL_SIZE / 2} y={py + CELL_SIZE / 2 + 3} textAnchor="middle"
+                  className="board-icon-label board-icon-label--exit" pointerEvents="none">SORTIE</text>
+              )}
+              {cell.isStartZone && (
+                <circle cx={px + CELL_SIZE / 2} cy={py + CELL_SIZE / 2} r={6}
+                  className="board-icon board-icon--start" pointerEvents="none" />
+              )}
+              {cell.isSpawnZone && (
+                <polygon
+                  points={`${px + CELL_SIZE / 2},${py + 8} ${px + CELL_SIZE - 8},${py + CELL_SIZE - 8} ${px + 8},${py + CELL_SIZE - 8}`}
+                  className="board-icon board-icon--spawn" pointerEvents="none"
+                />
+              )}
+              {cell.objective && (
+                <g pointerEvents="none">
+                  <line x1={px + 12} y1={py + 12} x2={px + CELL_SIZE - 12} y2={py + CELL_SIZE - 12}
+                    className={`board-objective board-objective--${cell.objective.color}`} />
+                  <line x1={px + CELL_SIZE - 12} y1={py + 12} x2={px + 12} y2={py + CELL_SIZE - 12}
+                    className={`board-objective board-objective--${cell.objective.color}`} />
+                </g>
+              )}
             </g>
+          );
+        })}
+
+        {/* Murs pleins et portes (colorées, en pointillés rouges si verrouillées) */}
+        {boundaries.map(({ cell, side, value }, i) => {
+          const px = cell.x * CELL_SIZE;
+          const py = cell.y * CELL_SIZE;
+          let x1, y1, x2, y2;
+          if (side === "south") { x1 = px; y1 = py + CELL_SIZE; x2 = px + CELL_SIZE; y2 = py + CELL_SIZE; }
+          else if (side === "north") { x1 = px; y1 = py; x2 = px + CELL_SIZE; y2 = py; }
+          else if (side === "east") { x1 = px + CELL_SIZE; y1 = py; x2 = px + CELL_SIZE; y2 = py + CELL_SIZE; }
+          else { x1 = px; y1 = py; x2 = px; y2 = py + CELL_SIZE; }
+
+          if (value === true) {
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="board-wall" />;
+          }
+          // Porte : trait coloré, pointillé et plus fin si verrouillée.
+          const color = DOOR_COLOR[value.color] || "#8a7f5a";
+          return (
+            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+              className={`board-door ${value.locked ? "board-door--locked" : ""}`}
+              stroke={value.locked ? DOOR_COLOR.red : color}
+            />
           );
         })}
 
@@ -69,11 +128,11 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
           const cy = cell.y * CELL_SIZE + CELL_SIZE / 2;
           return (
             <g key={`z-${cell.x}-${cell.y}`}>
-              <rect x={cx - 12} y={cy - 12} width={24} height={24}
+              <rect x={cx - 10} y={cy - 10} width={20} height={20}
                 className={`zombie-token zombie-token--${zs[0].type}`}
                 transform={`rotate(45 ${cx} ${cy})`} />
               {zs.length > 1 && (
-                <text x={cx + 16} y={cy - 10} className="zombie-count">{zs.length}</text>
+                <text x={cx + 14} y={cy - 8} className="zombie-count">{zs.length}</text>
               )}
             </g>
           );
@@ -97,6 +156,16 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
           </g>
         ))}
       </svg>
+
+      <div className="board-legend">
+        <span><i className="board-legend__swatch board-legend__swatch--building" /> Bâtiment</span>
+        <span><i className="board-legend__swatch board-legend__swatch--street" /> Rue</span>
+        <span><i className="board-legend__swatch board-legend__swatch--spawn" /> Spawn zombies</span>
+        <span><i className="board-legend__swatch board-legend__swatch--start" /> Départ joueurs</span>
+        <span><i className="board-legend__swatch board-legend__swatch--exit" /> Sortie</span>
+        <span><i className="board-legend__swatch board-legend__swatch--door-green" /> Porte</span>
+        <span><i className="board-legend__swatch board-legend__swatch--door-red" /> Porte verrouillée</span>
+      </div>
     </div>
   );
 }
