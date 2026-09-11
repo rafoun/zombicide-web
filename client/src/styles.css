@@ -60,6 +60,15 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 
 .error { color: var(--blood-bright); }
 
+.game-over__summary { color: var(--bone-dim); }
+.game-over__list { list-style: none; padding: 0; margin: 1.5rem 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.game-over__character {
+  display: flex; justify-content: space-between; padding: 0.5rem 0.75rem;
+  background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 2px;
+}
+.game-over__name { font-family: var(--font-display); text-transform: uppercase; }
+.game-over__stat { color: var(--bone-dim); font-family: var(--font-mono); }
+
 .game-layout {
   display: grid; grid-template-columns: minmax(220px, 260px) 1fr minmax(220px, 260px);
   gap: 1.5rem; max-width: 1300px; margin: 0 auto; align-items: start;

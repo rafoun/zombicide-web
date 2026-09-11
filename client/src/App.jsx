@@ -4,6 +4,7 @@ import Board from "./Board.jsx";
 import PlayerPanel from "./PlayerPanel.jsx";
 import InventoryPanel from "./InventoryPanel.jsx";
 import EventLog from "./EventLog.jsx";
+import GameOverScreen from "./GameOverScreen.jsx";
 
 export default function App() {
   const [name, setName] = useState("");
@@ -57,6 +58,10 @@ export default function App() {
   }
 
   const isHost = room && socket.id === room.hostSocketId;
+
+  if (gameState && gameState.phase === "game_over") {
+    return <GameOverScreen gameState={gameState} />;
+  }
 
   if (gameState) {
     const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
