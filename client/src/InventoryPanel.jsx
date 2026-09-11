@@ -2,6 +2,7 @@ function ItemStats({ card }) {
   if (card.type === "weapon") {
     return (
       <dl className="item-stats">
+        <div><dt>Type</dt><dd>{card.mode === "ranged" ? "Distance" : "Mêlée"}</dd></div>
         <div><dt>Dés</dt><dd>{card.dice}</dd></div>
         <div><dt>Précision</dt><dd>{card.accuracy}+</dd></div>
         <div><dt>Dégâts</dt><dd>{card.damage}</dd></div>

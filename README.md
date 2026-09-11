@@ -30,9 +30,14 @@ zombicide-web/
   Coureur (dégâts 1), Brute (dégâts 2), Abomination (dégâts 3, une seule à la
   fois sur le plateau).
 - **Combat** : on lance autant de dés que l'indique l'arme ; chaque dé ≥ sa
-  précision est une touche ; les touches sont assignées par ordre de priorité
-  (Brute/Abomination puis Marcheur puis Coureur) ; une arme trop faible ne
-  peut pas achever un zombie trop résistant.
+  précision est une touche ; une arme trop faible ne peut pas achever un
+  zombie trop résistant.
+- **Mêlée vs Tir à distance** (règle p. 27-28 du livret) : chaque arme a un
+  mode (`melee` ou `ranged`). En **tir à distance**, l'Ordre de Priorité des
+  cibles s'applique (Brute/Abomination puis Marcheur puis Coureur) et chaque
+  dé raté déclenche un **Tir Ami** : un Survivant présent dans la même zone
+  (jamais l'attaquant) encaisse les Dégâts de l'arme. En **corps à corps**,
+  pas de Tir Ami possible, même en cas d'échec.
 - **Blessures** : 3 blessures = mort, comme un Survivant classique.
 - **Adrénaline** : chaque zombie tué donne des Points d'Adrénaline ; à 7 PA un
   personnage gagne une 4e Action ; le niveau de danger le plus élevé parmi les
@@ -45,8 +50,12 @@ zombicide-web/
 
 - Une seule tuile de plateau (pas encore plusieurs tuiles à assembler).
 - Pas encore de vraies zones "bâtiment" : la Fouille est utilisable partout.
-- Le combat à distance n'est pas encore différencié du combat au corps à
-  corps : on attaque toujours sa propre zone.
+- Le tir à distance vise toujours la propre zone de l'attaquant (pas encore
+  de portée min/max ni de ligne de vue entre zones différentes).
+- Pas d'armes Dual (2 armes identiques tirées en une seule Action).
+- En mêlée, les touches sont réparties automatiquement en maximisant les
+  éliminations plutôt que laissées au libre choix du joueur (le livret laisse
+  le joueur choisir librement en mêlée, sans Ordre de Priorité imposé).
 - Pas de scénarios/objectifs de mission : mode "survie" libre.
 
 ## Lancer en local

@@ -3,18 +3,20 @@
 // dice = nombre de dés lancés. damage = dégâts par touche (doit atteindre le
 // seuil d'élimination du type de zombie visé, voir game/zombies.js).
 
+// mode: "melee" ou "ranged" — détermine si l'Ordre de Priorité des cibles et
+// le Tir Ami (règle du livret, p. 27-28) s'appliquent à cette arme.
 export const EQUIPMENT_CARDS = [
-  { id: "pistol", name: "Pistolet", type: "weapon", dice: 1, accuracy: 4, damage: 1,
+  { id: "pistol", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1,
     description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "pistol_2", name: "Pistolet", type: "weapon", dice: 1, accuracy: 4, damage: 1,
+  { id: "pistol_2", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1,
     description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "shotgun", name: "Fusil à pompe", type: "weapon", dice: 3, accuracy: 3, damage: 1,
+  { id: "shotgun", name: "Fusil à pompe", type: "weapon", mode: "ranged", dice: 3, accuracy: 3, damage: 1,
     description: "Dévastateur à courte portée, touche plusieurs cibles proches." },
-  { id: "sledgehammer", name: "Masse", type: "weapon", dice: 1, accuracy: 4, damage: 3,
+  { id: "sledgehammer", name: "Masse", type: "weapon", mode: "melee", dice: 1, accuracy: 4, damage: 3,
     description: "Lourde et lente, mais un seul coup peut suffire — même contre une Abomination." },
-  { id: "katana", name: "Katana", type: "weapon", dice: 3, accuracy: 2, damage: 1,
+  { id: "katana", name: "Katana", type: "weapon", mode: "melee", dice: 3, accuracy: 2, damage: 1,
     description: "Lame silencieuse, rapide, idéale contre les hordes de Marcheurs." },
-  { id: "fire_axe", name: "Hache de pompier", type: "weapon", dice: 2, accuracy: 3, damage: 2,
+  { id: "fire_axe", name: "Hache de pompier", type: "weapon", mode: "melee", dice: 2, accuracy: 3, damage: 2,
     description: "Polyvalente : assez puissante pour tuer une Brute." },
   { id: "first_aid_kit", name: "Trousse de secours", type: "item", effect: "heal",
     description: "Soigne une blessure. À garder pour les coups durs." },

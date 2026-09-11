@@ -54,9 +54,41 @@ function handleSearch(state, playerSocketId) {
   return { ok: true, state };
 }
 
-// Ordre de priorité des cibles, comme dans le vrai jeu :
+// Ordre de priorité des cibles (règle du Tir à distance uniquement, p. 27) :
 // 1) Brute/Abomination  2) Marcheur  3) Coureur
 const TARGETING_PRIORITY = ["brute", "abomination", "walker", "runner"];
+
+// Répartit `hitCount` touches parmi les zombies présents en tuant en priorité
+// les types que l'arme peut effectivement achever. Utilisé aussi bien pour la
+// mêlée (le joueur choisit librement -> on maximise le nombre de kills) que
+// pour le tir à distance (l'Ordre de Priorité est imposé par la règle).
+function assignHits(zombiesHere, damage, hitCount, order) {
+  let remainingHits = hitCount;
+  const killedIds = [];
+  for (const zombieType of order) {
+    if (remainingHits <= 0) break;
+    const stats = ZOMBIE_TYPES[zombieType];
+    if (damage < stats.killDamage) continue; // arme trop faible pour ce type
+
+    const targets = zombiesHere.filter((z) => z.type === zombieType && !killedIds.includes(z.id));
+    for (const target of targets) {
+      if (remainingHits <= 0) break;
+      killedIds.push(target.id);
+      remainingHits -= 1;
+    }
+  }
+  return killedIds;
+}
+
+function woundCharacter(character, amount, events, reason) {
+  character.wounds += amount;
+  if (character.wounds >= 3 && !character.dead) {
+    character.dead = true;
+    events.push(`${character.name} est mort (${reason}).`);
+  } else {
+    events.push(`${character.name} est blessé par ${reason} (${character.wounds}/3 blessures).`);
+  }
+}
 
 function handleAttack(state, playerSocketId) {
   const character = getCharacter(state, playerSocketId);
@@ -72,42 +104,55 @@ function handleAttack(state, playerSocketId) {
   const dice = weapon ? weapon.dice : 1;
   const accuracy = weapon ? weapon.accuracy : 4;
   const damage = weapon ? weapon.damage : 1;
+  const mode = weapon ? weapon.mode : "melee"; // à mains nues = corps à corps
 
   let hits = 0;
+  let misses = 0;
   for (let i = 0; i < dice; i++) {
     if (Math.floor(Math.random() * 6) + 1 >= accuracy) hits += 1;
+    else misses += 1;
   }
 
   character.actionsLeft -= 1;
   const events = [];
 
+  // Tir Ami (règle p. 28) : uniquement pour le tir à distance. Chaque dé raté
+  // touche automatiquement un Survivant présent dans la zone visée (jamais
+  // l'attaquant lui-même), pour le Dégât de l'arme.
+  if (mode === "ranged" && misses > 0) {
+    for (let i = 0; i < misses; i++) {
+      const bystanders = state.characters.filter(
+        (c) => !c.dead && c.playerId !== playerSocketId &&
+          c.position.x === character.position.x && c.position.y === character.position.y
+      );
+      if (bystanders.length === 0) break; // plus personne à toucher dans la zone
+      const victim = bystanders[Math.floor(Math.random() * bystanders.length)];
+      woundCharacter(victim, damage, events, `un tir ami de ${character.name}`);
+    }
+  }
+
   if (hits === 0) {
-    events.push(`${character.name} a raté son attaque.`);
+    events.unshift(`${character.name} a raté son attaque.`);
     return { ok: true, state, events };
   }
 
-  let remainingHits = hits;
-  const killedIds = [];
-  for (const zombieType of TARGETING_PRIORITY) {
-    if (remainingHits <= 0) break;
-    const stats = ZOMBIE_TYPES[zombieType];
-    if (damage < stats.killDamage) continue; // arme trop faible pour ce type
+  // Ordre d'attribution des touches : imposé (Priorité) en tir à distance,
+  // libre (on maximise les kills) en corps à corps — la règle p. 27 précise
+  // que l'Ordre de Priorité des cibles ne s'applique pas à la mêlée.
+  const killedIds = assignHits(zombiesHere, damage, hits, TARGETING_PRIORITY);
 
-    const targets = zombiesHere.filter((z) => z.type === zombieType && !killedIds.includes(z.id));
-    for (const target of targets) {
-      if (remainingHits <= 0) break;
-      killedIds.push(target.id);
-      remainingHits -= 1;
-      character.adrenaline += stats.adrenaline;
-      character.zombieKills += 1;
-    }
+  for (const id of killedIds) {
+    const zombie = zombiesHere.find((z) => z.id === id);
+    const stats = ZOMBIE_TYPES[zombie.type];
+    character.adrenaline += stats.adrenaline;
+    character.zombieKills += 1;
   }
 
   if (killedIds.length > 0) {
     state.zombies = state.zombies.filter((z) => !killedIds.includes(z.id));
-    events.push(`${character.name} élimine ${killedIds.length} zombie(s) !`);
+    events.unshift(`${character.name} élimine ${killedIds.length} zombie(s) !`);
   } else {
-    events.push(`${character.name} touche mais son arme est trop faible pour ces zombies.`);
+    events.unshift(`${character.name} touche mais son arme est trop faible pour ces zombies.`);
   }
 
   return { ok: true, state, events };
