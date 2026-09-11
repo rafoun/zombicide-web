@@ -1,5 +1,5 @@
 import { createStarterBoard, startingPositions } from "./board.js";
-import { createEquipmentDeck } from "./decks.js";
+import { createEquipmentDeck, maxActionsForAdrenaline } from "./decks.js";
 
 export function createInitialGameState(players) {
   const board = createStarterBoard();
@@ -7,29 +7,25 @@ export function createInitialGameState(players) {
 
   return {
     round: 1,
-    phase: "player_turn", // "player_turn" | "zombie_turn" (le tour zombie viendra plus tard)
+    phase: "player_turn",
     board,
     turnOrder: players.map((p) => p.socketId),
     currentTurnIndex: 0,
     characters: players.map((p, i) => ({
       playerId: p.socketId,
       name: p.name,
-      characterId: p.characterId,
       position: positions[i],
-      woundLevel: "blue", // couleurs Zombicide : blue -> yellow -> orange -> red -> dead
-      skills: [],
+      wounds: 0, // 0,1,2 -> blessé ; 3 -> mort (règle classique du jeu)
+      dead: false,
+      adrenaline: 0, // Points d'Adrénaline (PA) -> niveau de danger personnel
       equipment: [],
-      actionsLeft: 3,
+      actionsLeft: maxActionsForAdrenaline(0),
       zombieKills: 0,
     })),
-    zombies: [], // { id, type: "walker"|"runner"|"fatty"|"abomination", position, ... }
+    zombies: [], // { id, type, position }
     decks: {
-      zombieDeck: [], // pioche zombie par niveau de danger (blue/yellow/orange/red) — arrive avec l'IA zombie
       equipmentDeck: createEquipmentDeck(),
-      discardZombie: [],
       discardEquipment: [],
     },
-    dangerLevel: "blue",
-    objective: null, // condition de victoire du scénario choisi
   };
 }

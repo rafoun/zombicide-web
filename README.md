@@ -1,52 +1,60 @@
 # Zombicide Web
 
-Jeu multijoueur en ligne (2 à 8 joueurs) inspiré des règles officielles de Zombicide.
+Jeu multijoueur en ligne (2 à 8 joueurs) reprenant les règles officielles de
+Zombicide 2e édition (dans une version simplifiée).
 
 ## Structure
 
 ```
 zombicide-web/
-  server/              Serveur Node.js (autorité sur l'état de partie)
-    index.js           Gestion des salons (lobby), connexions, points d'entrée Socket.io
+  server/
+    index.js            Salons (lobby), Socket.io, dispatch des actions
     game/
-      state.js          Squelette de l'état de partie (à enrichir avec le moteur de règles)
-  client/              Client React (Vite)
+      board.js           Grille de zones, murs, calcul de déplacement
+      decks.js           Cartes équipement, table de spawn, seuils d'adrénaline
+      zombies.js         IA zombie (spawn + activation) fidèle au livret de règles
+      actions.js         Déplacement, fouille, combat (dés/précision/dégâts, priorité des cibles)
+      state.js           État de partie initial
+  client/
     src/
-      App.jsx           Écran de lobby : créer/rejoindre un salon
-      socket.js         Connexion au serveur
-      main.jsx
+      App.jsx            Lobby + orchestration de l'écran de jeu (3 colonnes)
+      PlayerPanel.jsx     Fiche personnage (blessures, adrénaline, actions)
+      Board.jsx           Plateau (murs, zombies, personnages)
+      InventoryPanel.jsx  Inventaire avec infobulle au survol
+      EventLog.jsx        Journal des morsures / éliminations
 ```
+
+## Règles reprises du livret officiel
+
+- **4 types de zombies** avec leurs vrais seuils d'élimination : Marcheur et
+  Coureur (dégâts 1), Brute (dégâts 2), Abomination (dégâts 3, une seule à la
+  fois sur le plateau).
+- **Combat** : on lance autant de dés que l'indique l'arme ; chaque dé ≥ sa
+  précision est une touche ; les touches sont assignées par ordre de priorité
+  (Brute/Abomination puis Marcheur puis Coureur) ; une arme trop faible ne
+  peut pas achever un zombie trop résistant.
+- **Blessures** : 3 blessures = mort, comme un Survivant classique.
+- **Adrénaline** : chaque zombie tué donne des Points d'Adrénaline ; à 7 PA un
+  personnage gagne une 4e Action ; le niveau de danger le plus élevé parmi les
+  survivants déterminera le nombre de zombies qui apparaissent.
+- **IA zombie** : un zombie déjà dans la zone d'un survivant mord (1 blessure,
+  sans jet de dé) ; sinon il avance d'une case vers le survivant le plus
+  proche (calcul de chemin) ; les Coureurs ont 2 Actions par activation.
+
+## Simplifications volontaires (v1)
+
+- Une seule tuile de plateau (pas encore plusieurs tuiles à assembler).
+- Pas encore de vraies zones "bâtiment" : la Fouille est utilisable partout.
+- Le combat à distance n'est pas encore différencié du combat au corps à
+  corps : on attaque toujours sa propre zone.
+- Pas de scénarios/objectifs de mission : mode "survie" libre.
 
 ## Lancer en local
 
-Terminal 1 — serveur :
 ```bash
-cd server
-npm install
-npm run dev
+cd server && npm install && npm run dev
 ```
-
-Terminal 2 — client :
 ```bash
-cd client
-npm install
-npm run dev
+cd client && npm install && npm run dev
 ```
-Puis ouvre http://localhost:5173 (un onglet par joueur pour tester en local).
-
-## Ce qui est déjà en place
-
-- Création/rejoindre un salon avec un code à 5 caractères
-- Liste des joueurs connectés en temps réel
-- L'hôte peut lancer la partie une fois 2 joueurs minimum présents
-- Un état de partie vide est créé et diffusé à tous (`createInitialGameState`)
-
-## Prochaines étapes (dans l'ordre logique)
-
-1. **Plateau** : modéliser les tuiles Zombicide (grille, portes, zones de spawn), les afficher côté client, permettre le déplacement des pions et le synchroniser via `game_action`.
-2. **Decks** : deck de cartes zombies (spawn) et deck d'équipement, tirage et pioche/défausse synchronisées.
-3. **Règles de combat et ligne de vue** : calcul de la ligne de vue sur la grille, jets de dés, résolution des combats.
-4. **IA des zombies** : logique d'activation (bruit, ligne de vue, déplacement vers la cible la plus proche) à chaque fin de tour.
-5. **Gestion de partie** : scénarios, objectifs de victoire/défaite, montée en niveau de danger (bleu → jaune → orange → rouge).
-
-Tout le moteur de règles doit rester **côté serveur** (`server/game/`) pour que le client ne fasse qu'afficher l'état et envoyer des actions — ça évite la triche et garde tout le monde synchronisé.
+Ouvre http://localhost:5173 dans plusieurs onglets pour tester à plusieurs.

@@ -1,17 +1,25 @@
-// Liste simplifiée des cartes équipement de base de Zombicide (édition originale).
-// On pourra enrichir plus tard avec les effets précis (dégâts, portée, munitions...).
+// Cartes équipement, inspirées des cartes de base de Zombicide 2e édition.
+// accuracy = valeur minimale sur un dé pour toucher (2+ minimum dans le vrai jeu).
+// dice = nombre de dés lancés. damage = dégâts par touche (doit atteindre le
+// seuil d'élimination du type de zombie visé, voir game/zombies.js).
 
 export const EQUIPMENT_CARDS = [
-  { id: "pistol", name: "Pistolet", type: "weapon", range: "1", dice: 1, damage: 1, description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "pistol_2", name: "Pistolet", type: "weapon", range: "1", dice: 1, damage: 1, description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "shotgun", name: "Fusil à pompe", type: "weapon", range: "1-2", dice: 3, damage: 1, description: "Dévastateur à courte portée, touche plusieurs cibles proches." },
-  { id: "sledgehammer", name: "Masse", type: "weapon", range: "0", dice: 1, damage: 3, description: "Lourde et lente, mais un seul coup peut suffire." },
-  { id: "katana", name: "Katana", type: "weapon", range: "0", dice: 3, damage: 1, description: "Lame silencieuse, rapide, idéale contre les hordes." },
-  { id: "fire_axe", name: "Hache de pompier", type: "weapon", range: "0", dice: 2, damage: 2, description: "Polyvalente : dégâts solides en mêlée." },
-  { id: "molotov", name: "Cocktail Molotov", type: "weapon", range: "1-3", dice: 1, damage: 3, description: "Enflamme une zone entière. À utiliser avec prudence." },
-  { id: "first_aid_kit", name: "Trousse de secours", type: "item", effect: "heal", description: "Soigne une blessure. À garder pour les coups durs." },
-  { id: "crowbar", name: "Pied de biche", type: "item", effect: "open_door", description: "Force les portes bloquées sans faire de bruit inutile." },
-  { id: "ammo", name: "Munitions", type: "item", effect: "reload", description: "Recharge une arme à feu à sec." },
+  { id: "pistol", name: "Pistolet", type: "weapon", dice: 1, accuracy: 4, damage: 1,
+    description: "Arme de poing fiable. Discrète mais peu puissante." },
+  { id: "pistol_2", name: "Pistolet", type: "weapon", dice: 1, accuracy: 4, damage: 1,
+    description: "Arme de poing fiable. Discrète mais peu puissante." },
+  { id: "shotgun", name: "Fusil à pompe", type: "weapon", dice: 3, accuracy: 3, damage: 1,
+    description: "Dévastateur à courte portée, touche plusieurs cibles proches." },
+  { id: "sledgehammer", name: "Masse", type: "weapon", dice: 1, accuracy: 4, damage: 3,
+    description: "Lourde et lente, mais un seul coup peut suffire — même contre une Abomination." },
+  { id: "katana", name: "Katana", type: "weapon", dice: 3, accuracy: 2, damage: 1,
+    description: "Lame silencieuse, rapide, idéale contre les hordes de Marcheurs." },
+  { id: "fire_axe", name: "Hache de pompier", type: "weapon", dice: 2, accuracy: 3, damage: 2,
+    description: "Polyvalente : assez puissante pour tuer une Brute." },
+  { id: "first_aid_kit", name: "Trousse de secours", type: "item", effect: "heal",
+    description: "Soigne une blessure. À garder pour les coups durs." },
+  { id: "crowbar", name: "Pied de biche", type: "item", effect: "open_door",
+    description: "Force les portes bloquées sans faire de bruit inutile." },
 ];
 
 export function shuffle(array) {
@@ -27,12 +35,33 @@ export function createEquipmentDeck() {
   return shuffle(EQUIPMENT_CARDS.map((card) => ({ ...card })));
 }
 
-// Nombre de zombies qui apparaissent à chaque phase zombie, selon le niveau
-// de danger (bleu -> jaune -> orange -> rouge), comme dans le vrai jeu où la
-// pioche zombie grossit avec le danger.
-export const ZOMBIE_SPAWN_COUNT = {
-  blue: 2,
-  yellow: 3,
-  orange: 4,
-  red: 5,
+// Table de spawn simplifiée par niveau de danger (bleu/jaune/orange/rouge),
+// inspirée des vraies cartes zombies qui font apparaître plus (et de plus
+// dangereux) zombies au fil de la partie.
+export const SPAWN_TABLE = {
+  blue: [{ type: "walker", count: 1 }],
+  yellow: [{ type: "walker", count: 2 }, { type: "runner", count: 1 }],
+  orange: [{ type: "walker", count: 4 }, { type: "runner", count: 1 }, { type: "brute", count: 1 }],
+  red: [
+    { type: "walker", count: 6 },
+    { type: "runner", count: 2 },
+    { type: "brute", count: 2 },
+    { type: "abomination", count: 1 },
+  ],
 };
+
+// Seuils de Points d'Adrénaline pour passer au niveau de danger suivant
+// (repris tels quels du livret de règles).
+export const DANGER_THRESHOLDS = { blue: 0, yellow: 7, orange: 19, red: 43 };
+
+export function dangerLevelForAdrenaline(adrenaline) {
+  if (adrenaline >= DANGER_THRESHOLDS.red) return "red";
+  if (adrenaline >= DANGER_THRESHOLDS.orange) return "orange";
+  if (adrenaline >= DANGER_THRESHOLDS.yellow) return "yellow";
+  return "blue";
+}
+
+export function maxActionsForAdrenaline(adrenaline) {
+  // Le vrai jeu accorde une 4e Action au niveau Jaune (7 PA).
+  return adrenaline >= DANGER_THRESHOLDS.yellow ? 4 : 3;
+}

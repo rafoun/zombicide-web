@@ -15,15 +15,6 @@ const io = new Server(httpServer, {
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-/**
- * rooms: Map<roomCode, {
- *   code: string,
- *   hostSocketId: string,
- *   players: Array<{ socketId: string, name: string, characterId: string|null }>,
- *   status: "lobby" | "playing",
- *   game: object | null   // rempli par createInitialGameState() au démarrage
- * }>
- */
 const rooms = new Map();
 
 function roomSummary(room) {
@@ -31,7 +22,7 @@ function roomSummary(room) {
     code: room.code,
     hostSocketId: room.hostSocketId,
     status: room.status,
-    players: room.players.map((p) => ({ name: p.name, characterId: p.characterId })),
+    players: room.players.map((p) => ({ name: p.name })),
   };
 }
 
@@ -47,7 +38,7 @@ io.on("connection", (socket) => {
     const room = {
       code,
       hostSocketId: socket.id,
-      players: [{ socketId: socket.id, name, characterId: null }],
+      players: [{ socketId: socket.id, name }],
       status: "lobby",
       game: null,
     };
@@ -63,7 +54,7 @@ io.on("connection", (socket) => {
     if (room.status !== "lobby") return callback({ ok: false, error: "La partie a déjà commencé" });
     if (room.players.length >= 8) return callback({ ok: false, error: "Salon complet (8 joueurs max)" });
 
-    room.players.push({ socketId: socket.id, name, characterId: null });
+    room.players.push({ socketId: socket.id, name });
     socket.join(code);
     currentRoomCode = code;
     broadcastRoom(room);
@@ -73,7 +64,7 @@ io.on("connection", (socket) => {
   socket.on("start_game", () => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.hostSocketId !== socket.id) return;
-    if (room.players.length < 2) return; // minimum 2 joueurs
+    if (room.players.length < 2) return;
 
     room.status = "playing";
     room.game = createInitialGameState(room.players);
@@ -81,7 +72,6 @@ io.on("connection", (socket) => {
     broadcastRoom(room);
   });
 
-  // Point d'entrée générique pour les actions de jeu (déplacement, combat, cartes...).
   socket.on("game_action", (action, callback) => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.status !== "playing") {
@@ -91,9 +81,7 @@ io.on("connection", (socket) => {
     const result = applyAction(room.game, socket.id, action);
     if (result.ok) {
       io.to(room.code).emit("game_state", room.game);
-      if (result.events?.length) {
-        io.to(room.code).emit("game_log", result.events);
-      }
+      if (result.events?.length) io.to(room.code).emit("game_log", result.events);
     }
     callback?.(result.ok ? { ok: true } : { ok: false, error: result.error });
   });
@@ -108,9 +96,7 @@ io.on("connection", (socket) => {
       rooms.delete(currentRoomCode);
       return;
     }
-    if (room.hostSocketId === socket.id) {
-      room.hostSocketId = room.players[0].socketId; // transfert de l'hôte
-    }
+    if (room.hostSocketId === socket.id) room.hostSocketId = room.players[0].socketId;
     broadcastRoom(room);
   });
 });

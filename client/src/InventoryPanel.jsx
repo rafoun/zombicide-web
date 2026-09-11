@@ -2,27 +2,15 @@ function ItemStats({ card }) {
   if (card.type === "weapon") {
     return (
       <dl className="item-stats">
-        <div>
-          <dt>Portée</dt>
-          <dd>{card.range}</dd>
-        </div>
-        <div>
-          <dt>Dés</dt>
-          <dd>{card.dice}</dd>
-        </div>
-        <div>
-          <dt>Dégâts</dt>
-          <dd>{card.damage}</dd>
-        </div>
+        <div><dt>Dés</dt><dd>{card.dice}</dd></div>
+        <div><dt>Précision</dt><dd>{card.accuracy}+</dd></div>
+        <div><dt>Dégâts</dt><dd>{card.damage}</dd></div>
       </dl>
     );
   }
   return (
     <dl className="item-stats">
-      <div>
-        <dt>Effet</dt>
-        <dd>{card.effect}</dd>
-      </div>
+      <div><dt>Effet</dt><dd>{card.effect}</dd></div>
     </dl>
   );
 }
@@ -31,7 +19,6 @@ export default function InventoryPanel({ equipment }) {
   return (
     <aside className="inventory-panel">
       <h2 className="inventory-panel__title">Inventaire</h2>
-
       {equipment.length === 0 ? (
         <p className="inventory-panel__empty">Rien pour l'instant. Fouille pour trouver du matériel.</p>
       ) : (

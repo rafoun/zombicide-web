@@ -17,9 +17,7 @@ export default function App() {
     socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
     socket.on("game_started", (state) => setGameState(state));
     socket.on("game_state", (state) => setGameState(state));
-    socket.on("game_log", (messages) => {
-      setLogMessages((prev) => [...prev, ...messages].slice(-6));
-    });
+    socket.on("game_log", (messages) => setLogMessages((prev) => [...prev, ...messages].slice(-6)));
 
     return () => {
       socket.off("room_update");
@@ -64,20 +62,24 @@ export default function App() {
     const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
     const isMyTurn = currentPlayerId === socket.id;
     const myCharacter = gameState.characters.find((c) => c.playerId === socket.id);
+    const hasZombiesHere = myCharacter
+      ? gameState.zombies.some((z) => z.position.x === myCharacter.position.x && z.position.y === myCharacter.position.y)
+      : false;
 
     return (
       <div className="game-layout">
         <PlayerPanel
           character={myCharacter}
           isMyTurn={isMyTurn}
+          hasZombiesHere={hasZombiesHere}
           onSearch={() => socket.emit("game_action", { type: "search" })}
+          onAttack={() => socket.emit("game_action", { type: "attack" })}
           onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
         />
         <Board
           gameState={gameState}
           mySocketId={socket.id}
           onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
-          onAttack={(zombieId) => socket.emit("game_action", { type: "attack", zombieId })}
         />
         <div className="right-column">
           <InventoryPanel equipment={myCharacter?.equipment || []} />
@@ -92,11 +94,7 @@ export default function App() {
       <div className="app">
         <h1>Salon {room.code}</h1>
         <p>Partage ce code à tes amis pour qu'ils rejoignent.</p>
-        <ul>
-          {room.players.map((p, i) => (
-            <li key={i}>{p.name}</li>
-          ))}
-        </ul>
+        <ul>{room.players.map((p, i) => <li key={i}>{p.name}</li>)}</ul>
         {isHost ? (
           <button disabled={room.players.length < 2} onClick={handleStartGame}>
             Lancer la partie ({room.players.length}/8)
@@ -115,20 +113,13 @@ export default function App() {
         Ton nom
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-
       <div className="actions">
         <button onClick={handleCreateRoom}>Créer un salon</button>
-
         <div className="join">
-          <input
-            placeholder="Code du salon"
-            value={codeInput}
-            onChange={(e) => setCodeInput(e.target.value)}
-          />
+          <input placeholder="Code du salon" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} />
           <button onClick={handleJoinRoom}>Rejoindre</button>
         </div>
       </div>
-
       {error && <p className="error">{error}</p>}
     </div>
   );
