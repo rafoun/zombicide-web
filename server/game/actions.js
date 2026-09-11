@@ -182,27 +182,41 @@ function handleAttack(state, playerSocketId) {
   return { ok: true, state, events };
 }
 
+// Prochain personnage vivant à partir de `fromIndex` (inclus) dans l'ordre du
+// tour. -1 si personne n'est vivant jusqu'à la fin de la liste.
+function nextAliveIndex(state, fromIndex) {
+  let i = fromIndex;
+  while (i < state.characters.length && state.characters[i].dead) i++;
+  return i < state.characters.length ? i : -1;
+}
+
 function handleEndTurn(state) {
   const character = state.characters[state.currentTurnIndex];
   character.actionsLeft = 0;
 
-  const isLastPlayer = state.currentTurnIndex === state.turnOrder.length - 1;
-  if (!isLastPlayer) {
-    state.currentTurnIndex += 1;
-    const next = state.characters[state.currentTurnIndex];
+  // On ne donne jamais la main à un personnage mort : sinon plus personne ne
+  // peut cliquer "Terminer mon tour" et la partie reste bloquée.
+  const nextIndex = nextAliveIndex(state, state.currentTurnIndex + 1);
+  if (nextIndex !== -1) {
+    state.currentTurnIndex = nextIndex;
+    const next = state.characters[nextIndex];
     next.actionsLeft = maxActionsForAdrenaline(next.adrenaline);
     return { ok: true, state };
   }
 
-  // Dernier joueur : phase zombie (spawn + activation), puis nouvelle manche.
+  // Plus personne de vivant après nous dans l'ordre : fin de manche.
   state.phase = "zombie_turn";
   spawnZombies(state);
   const events = activateZombies(state);
   state.phase = "player_turn";
   state.round += 1;
-  state.currentTurnIndex = 0;
-  const first = state.characters[0];
-  if (!first.dead) first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
+
+  const firstIndex = nextAliveIndex(state, 0);
+  if (firstIndex !== -1) {
+    state.currentTurnIndex = firstIndex;
+    const first = state.characters[firstIndex];
+    first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
+  }
 
   return { ok: true, state, events };
 }

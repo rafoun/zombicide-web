@@ -2,6 +2,22 @@ const CELL_SIZE = 48;
 
 const DOOR_COLOR = { green: "#4f8f3f", blue: "#2f5d8a", red: "#a1272c" };
 
+const ZOMBIE_TYPE_LABEL = {
+  walker: "Marcheur",
+  runner: "Coureur",
+  brute: "Brute",
+  abomination: "Abomination",
+};
+
+// Une lettre + une couleur par type, pour les distinguer d'un coup d'œil sur
+// le plateau (les Brutes et Abominations sont aussi dessinées plus grandes).
+const ZOMBIE_DISPLAY = {
+  walker: { letter: "M", size: 9 },
+  runner: { letter: "C", size: 9 },
+  brute: { letter: "B", size: 12 },
+  abomination: { letter: "A", size: 14 },
+};
+
 export default function Board({ gameState, mySocketId, onMoveTo }) {
   const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
@@ -19,9 +35,20 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
     onMoveTo(x, y);
   }
 
+  // Regroupe les zombies d'une case par type (un Marcheur ne doit jamais
+  // cacher une Brute qui partagerait la même case).
   function zombiesAt(x, y) {
-    return zombies.filter((z) => z.position.x === x && z.position.y === y);
+    const here = zombies.filter((z) => z.position.x === x && z.position.y === y);
+    const byType = {};
+    for (const z of here) byType[z.type] = (byType[z.type] || 0) + 1;
+    return Object.entries(byType).map(([type, count]) => ({ type, count }));
   }
+
+  // Position de chaque pastille de type dans une case (jusqu'à 4 types
+  // différents empilés sur la même case, disposés en petit quadrillage).
+  const SLOT_OFFSETS = [
+    [-1, -1], [1, -1], [-1, 1], [1, 1],
+  ];
 
   // Un seul segment de mur/porte par frontière (évite de dessiner deux fois
   // la même limite en la parcourant depuis chaque case voisine).
@@ -122,18 +149,34 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
         })}
 
         {board.cells.map((cell) => {
-          const zs = zombiesAt(cell.x, cell.y);
-          if (zs.length === 0) return null;
+          const groups = zombiesAt(cell.x, cell.y);
+          if (groups.length === 0) return null;
           const cx = cell.x * CELL_SIZE + CELL_SIZE / 2;
           const cy = cell.y * CELL_SIZE + CELL_SIZE / 2;
+          // 1 seul type : la pastille prend le centre de la case. Plusieurs
+          // types : chacun prend un coin, pour qu'aucun ne soit caché.
+          const single = groups.length === 1;
           return (
             <g key={`z-${cell.x}-${cell.y}`}>
-              <rect x={cx - 10} y={cy - 10} width={20} height={20}
-                className={`zombie-token zombie-token--${zs[0].type}`}
-                transform={`rotate(45 ${cx} ${cy})`} />
-              {zs.length > 1 && (
-                <text x={cx + 14} y={cy - 8} className="zombie-count">{zs.length}</text>
-              )}
+              {groups.map((g, i) => {
+                const display = ZOMBIE_DISPLAY[g.type] || ZOMBIE_DISPLAY.walker;
+                const [ox, oy] = single ? [0, 0] : SLOT_OFFSETS[i % SLOT_OFFSETS.length];
+                const spread = single ? 0 : CELL_SIZE / 4.2;
+                const gx = cx + ox * spread;
+                const gy = cy + oy * spread;
+                const r = single ? display.size + 2 : display.size - 2;
+                return (
+                  <g key={g.type} title={ZOMBIE_TYPE_LABEL[g.type]}>
+                    <circle cx={gx} cy={gy} r={r} className={`zombie-token zombie-token--${g.type}`} />
+                    <text x={gx} y={gy + 3.5} textAnchor="middle" className="zombie-token__letter">
+                      {display.letter}
+                    </text>
+                    {g.count > 1 && (
+                      <text x={gx + r} y={gy - r} textAnchor="middle" className="zombie-count">{g.count}</text>
+                    )}
+                  </g>
+                );
+              })}
             </g>
           );
         })}
@@ -165,6 +208,13 @@ export default function Board({ gameState, mySocketId, onMoveTo }) {
         <span><i className="board-legend__swatch board-legend__swatch--exit" /> Sortie</span>
         <span><i className="board-legend__swatch board-legend__swatch--door-green" /> Porte</span>
         <span><i className="board-legend__swatch board-legend__swatch--door-red" /> Porte verrouillée</span>
+      </div>
+      <div className="board-legend">
+        {Object.entries(ZOMBIE_TYPE_LABEL).map(([type, label]) => (
+          <span key={type}>
+            <i className={`board-legend__swatch board-legend__swatch--z-${type}`} /> {label}
+          </span>
+        ))}
       </div>
     </div>
   );

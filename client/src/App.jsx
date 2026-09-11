@@ -89,9 +89,9 @@ export default function App() {
     const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
     const isMyTurn = currentPlayerId === socket.id;
     const myCharacter = gameState.characters.find((c) => c.playerId === socket.id);
-    const hasZombiesHere = myCharacter
-      ? gameState.zombies.some((z) => z.position.x === myCharacter.position.x && z.position.y === myCharacter.position.y)
-      : false;
+    const zombiesHere = myCharacter
+      ? gameState.zombies.filter((z) => z.position.x === myCharacter.position.x && z.position.y === myCharacter.position.y)
+      : [];
     const mission = { name: gameState.scenarioName, progress: missionProgress(gameState) };
 
     return (
@@ -106,7 +106,7 @@ export default function App() {
         <PlayerPanel
           character={myCharacter}
           isMyTurn={isMyTurn}
-          hasZombiesHere={hasZombiesHere}
+          zombiesHere={zombiesHere}
           onSearch={() => socket.emit("game_action", { type: "search" })}
           onAttack={() => socket.emit("game_action", { type: "attack" })}
           onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}

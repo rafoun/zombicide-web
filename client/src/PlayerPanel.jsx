@@ -9,7 +9,17 @@ function dangerLevel(adrenaline) {
 
 const WOUND_TRACK = ["blue", "yellow", "orange", "red"]; // red = mort (3e blessure)
 
-export default function PlayerPanel({ character, isMyTurn, hasZombiesHere, onSearch, onAttack, onEndTurn, mission }) {
+const ZOMBIE_TYPE_LABEL = { walker: "Marcheur", runner: "Coureur", brute: "Brute", abomination: "Abomination" };
+
+function zombieSummary(zombiesHere) {
+  const byType = {};
+  for (const z of zombiesHere) byType[z.type] = (byType[z.type] || 0) + 1;
+  return Object.entries(byType)
+    .map(([type, count]) => `${count} ${ZOMBIE_TYPE_LABEL[type]}${count > 1 ? "s" : ""}`)
+    .join(", ");
+}
+
+export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch, onAttack, onEndTurn, mission }) {
   if (!character) return null;
 
   const woundIndex = character.dead ? 3 : character.wounds; // 0,1,2 blessures -> index ; mort -> 3
@@ -58,12 +68,15 @@ export default function PlayerPanel({ character, isMyTurn, hasZombiesHere, onSea
         <p className="kill-total">{character.zombieKills}</p>
       </div>
 
-      {isMyTurn && !character.dead && (
+      {isMyTurn && (
         <div className="player-panel__actions">
-          {character.actionsLeft > 0 && hasZombiesHere && (
+          {!character.dead && zombiesHere.length > 0 && (
+            <p className="zombies-here">Zombies ici : {zombieSummary(zombiesHere)}</p>
+          )}
+          {!character.dead && character.actionsLeft > 0 && zombiesHere.length > 0 && (
             <button onClick={onAttack}>Attaquer (mêlée)</button>
           )}
-          {character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
+          {!character.dead && character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
           <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>
         </div>
       )}
