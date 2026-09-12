@@ -2,6 +2,35 @@ const CELL_SIZE = 48;
 
 const DOOR_COLOR = { green: "#4f8f3f", blue: "#2f5d8a", red: "#a1272c" };
 
+const RANGE_DIRS = [
+  { dx: 1, dy: 0, side: "east" },
+  { dx: -1, dy: 0, side: "west" },
+  { dx: 0, dy: 1, side: "south" },
+  { dx: 0, dy: -1, side: "north" },
+];
+
+// Miroir client de la fonction serveur : cases visibles en ligne droite dans
+// les 4 directions, jusqu'à `maxRange`, bloquées par un mur plein ou une
+// porte verrouillée — sert uniquement à surligner les cases visables.
+function straightLineTargets(board, from, maxRange) {
+  const cellAt = (x, y) => board.cells.find((c) => c.x === x && c.y === y);
+  const results = [];
+  for (const { dx, dy, side } of RANGE_DIRS) {
+    let x = from.x, y = from.y;
+    for (let dist = 1; dist <= maxRange; dist++) {
+      const cell = cellAt(x, y);
+      if (!cell) break;
+      const wall = cell.walls[side];
+      if (wall === true) break;
+      if (wall && wall.door && wall.locked) break;
+      x += dx; y += dy;
+      if (!cellAt(x, y)) break;
+      results.push({ x, y, distance: dist });
+    }
+  }
+  return results;
+}
+
 const ZOMBIE_TYPE_LABEL = {
   walker: "Marcheur",
   runner: "Coureur",
@@ -18,7 +47,7 @@ const ZOMBIE_DISPLAY = {
   abomination: { letter: "A", size: 14 },
 };
 
-export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) {
+export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, targetingWeapon, onConfirmTarget }) {
   const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
   const currentPlayerId = turnOrder[currentTurnIndex];
   const isMyTurn = currentPlayerId === mySocketId;
@@ -33,6 +62,20 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) 
     return board.cells.find((c) => c.x === x && c.y === y);
   }
 
+  // Cases que l'arme en cours de visée peut effectivement atteindre (portée +
+  // ligne de vue), et qui contiennent au moins un zombie à viser.
+  const rangedTargets = (() => {
+    if (!targetingWeapon || !myCharacter) return [];
+    const [minRange, maxRange] = targetingWeapon.range || [0, 0];
+    const inRange = straightLineTargets(board, myCharacter.position, maxRange).filter((t) => t.distance >= minRange);
+    if (minRange <= 0) inRange.push({ x: myCharacter.position.x, y: myCharacter.position.y, distance: 0 });
+    return inRange.filter((t) => zombies.some((z) => z.position.x === t.x && z.position.y === t.y));
+  })();
+
+  function isRangedTarget(x, y) {
+    return rangedTargets.some((t) => t.x === x && t.y === y);
+  }
+
   // Renvoie ce qu'il y a entre 2 cases adjacentes : true (mur infranchissable),
   // un objet Porte ({door, locked, color}), ou rien (passage libre).
   function wallBetween(from, to) {
@@ -43,6 +86,12 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) 
 
   function handleCellClick(x, y) {
     if (!isMyTurn || !myCharacter || myCharacter.dead) return;
+
+    if (targetingWeapon) {
+      if (isRangedTarget(x, y)) onConfirmTarget(x, y);
+      return; // en visée : on ne fait rien d'autre qu'essayer de tirer
+    }
+
     if (!isAdjacent(myCharacter.position, { x, y })) return;
     const wall = wallBetween(myCharacter.position, { x, y });
     if (wall === true) return; // mur infranchissable, rien à faire ici
@@ -88,6 +137,13 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) 
         </span>
       </div>
 
+      {targetingWeapon && (
+        <p className="targeting-hint">
+          Visée avec {targetingWeapon.name} (Portée {targetingWeapon.range?.[0] ?? 0}-{targetingWeapon.range?.[1] ?? 0}) :
+          {rangedTargets.length > 0 ? " clique une zone en surbrillance." : " aucun zombie à portée."}
+        </p>
+      )}
+
       <svg
         width={board.width * CELL_SIZE}
         height={board.height * CELL_SIZE}
@@ -98,7 +154,10 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) 
           const px = cell.x * CELL_SIZE;
           const py = cell.y * CELL_SIZE;
           const blockedByWall = myCharacter && wallBetween(myCharacter.position, cell) === true;
-          const clickable = isMyTurn && myCharacter && !myCharacter.dead && isAdjacent(myCharacter.position, cell) && !blockedByWall;
+          const isTarget = isRangedTarget(cell.x, cell.y);
+          const clickable = targetingWeapon
+            ? isTarget
+            : isMyTurn && myCharacter && !myCharacter.dead && isAdjacent(myCharacter.position, cell) && !blockedByWall;
 
           let cellClass = cell.building ? "board-cell--building" : "board-cell--street";
           if (cell.isSpawnZone) cellClass += " board-cell--spawn";
@@ -115,7 +174,8 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor }) 
               />
               {clickable && (
                 <rect x={px + 3} y={py + 3} width={CELL_SIZE - 6} height={CELL_SIZE - 6}
-                  className="board-cell__highlight" pointerEvents="none" />
+                  className={isTarget ? "board-cell__highlight board-cell__highlight--target" : "board-cell__highlight"}
+                  pointerEvents="none" />
               )}
 
               {cell.isExit && (

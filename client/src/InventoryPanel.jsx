@@ -8,6 +8,9 @@ function ItemStats({ card }) {
     return (
       <dl className="item-stats">
         <div><dt>Type</dt><dd>{card.mode === "ranged" ? "Distance" : "Mêlée"}</dd></div>
+        {card.mode === "ranged" && (
+          <div><dt>Portée</dt><dd>{card.range?.[0] ?? 0}-{card.range?.[1] ?? 0} zones</dd></div>
+        )}
         <div><dt>Dés</dt><dd>{card.dice}</dd></div>
         <div><dt>Précision</dt><dd>{card.accuracy}+</dd></div>
         <div><dt>Dégâts</dt><dd>{card.damage}</dd></div>

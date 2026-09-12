@@ -81,6 +81,8 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .board-cell--start { fill: #16283a; }
 .board-cell--exit { fill: #3a3011; }
 .board-cell__highlight { fill: none; stroke: var(--toxic-bright); stroke-width: 2; }
+.board-cell__highlight--target { stroke: var(--blood-bright); stroke-width: 3; }
+.targeting-hint { margin: 0.25rem 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--blood-bright); text-align: center; }
 .board-wall { stroke: var(--bone-dim); stroke-width: 3; stroke-linecap: square; }
 .board-door { stroke-width: 3; stroke-linecap: round; }
 .board-door--locked { stroke-width: 4; stroke-dasharray: 4 3; }

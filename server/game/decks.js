@@ -6,11 +6,11 @@
 // mode: "melee" ou "ranged" — détermine si l'Ordre de Priorité des cibles et
 // le Tir Ami (règle du livret, p. 27-28) s'appliquent à cette arme.
 export const EQUIPMENT_CARDS = [
-  { id: "pistol", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1,
+  { id: "pistol", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1, range: [0, 2],
     description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "pistol_2", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1,
+  { id: "pistol_2", name: "Pistolet", type: "weapon", mode: "ranged", dice: 1, accuracy: 4, damage: 1, range: [0, 2],
     description: "Arme de poing fiable. Discrète mais peu puissante." },
-  { id: "shotgun", name: "Fusil à pompe", type: "weapon", mode: "ranged", dice: 3, accuracy: 3, damage: 1,
+  { id: "shotgun", name: "Fusil à pompe", type: "weapon", mode: "ranged", dice: 3, accuracy: 3, damage: 1, range: [0, 1],
     description: "Dévastateur à courte portée, touche plusieurs cibles proches." },
   { id: "sledgehammer", name: "Masse", type: "weapon", mode: "melee", dice: 1, accuracy: 4, damage: 3,
     description: "Lourde et lente, mais un seul coup peut suffire — même contre une Abomination." },

@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 const DANGER_THRESHOLDS = { blue: 0, yellow: 7, orange: 19, red: 43 };
 
 function dangerLevel(adrenaline) {
@@ -21,19 +19,20 @@ function zombieSummary(zombiesHere) {
     .join(", ");
 }
 
-export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch, onAttack, onUseItem, onEndTurn, mission }) {
-  const weapons = character?.equipment.filter((e) => e.type === "weapon") || [];
-  const [selectedWeaponId, setSelectedWeaponId] = useState(null);
-
+export default function PlayerPanel({
+  character, isMyTurn, zombiesHere, weapons, selectedWeaponId, onSelectWeapon,
+  isTargeting, onCancelTargeting, onSearch, onAttack, onUseItem, onEndTurn, mission,
+}) {
   if (!character) return null;
 
   const woundIndex = character.dead ? 3 : character.wounds; // 0,1,2 blessures -> index ; mort -> 3
   const level = dangerLevel(character.adrenaline);
-
-  // Arme sélectionnée : celle choisie par le joueur si elle est toujours dans
-  // l'inventaire, sinon la première trouvée, sinon mains nues.
   const activeWeapon = weapons.find((w) => w.id === selectedWeaponId) || weapons[0] || null;
   const healKit = character.equipment.find((e) => e.effect === "heal");
+  // Le corps à corps (et les mains nues) ne visent que sa propre zone ; le tir
+  // à distance peut viser une zone éloignée, donc le bouton reste disponible
+  // même sans zombie dans SA zone (on choisira la cible sur le plateau).
+  const canAttack = activeWeapon?.mode === "ranged" || zombiesHere.length > 0;
 
   return (
     <aside className="player-panel">
@@ -84,32 +83,36 @@ export default function PlayerPanel({ character, isMyTurn, zombiesHere, onSearch
             <p className="zombies-here">Zombies ici : {zombieSummary(zombiesHere)}</p>
           )}
 
-          {!character.dead && zombiesHere.length > 0 && weapons.length > 1 && (
+          {!character.dead && !isTargeting && weapons.length > 1 && (
             <select
               className="weapon-select"
               value={activeWeapon?.id || ""}
-              onChange={(e) => setSelectedWeaponId(e.target.value)}
+              onChange={(e) => onSelectWeapon(e.target.value)}
             >
               {weapons.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.name} ({w.mode === "ranged" ? "distance" : "mêlée"}, Dégât {w.damage})
+                  {w.name} ({w.mode === "ranged" ? `distance, Portée ${w.range?.[0] ?? 0}-${w.range?.[1] ?? 0}` : "mêlée"}, Dégât {w.damage})
                 </option>
               ))}
             </select>
           )}
 
-          {!character.dead && character.actionsLeft > 0 && zombiesHere.length > 0 && (
-            <button onClick={() => onAttack(activeWeapon?.id)}>
+          {!character.dead && isTargeting && (
+            <button className="button--secondary" onClick={onCancelTargeting}>Annuler la visée</button>
+          )}
+
+          {!character.dead && !isTargeting && character.actionsLeft > 0 && canAttack && (
+            <button onClick={onAttack}>
               Attaquer {activeWeapon ? `(${activeWeapon.name}, ${activeWeapon.mode === "ranged" ? "distance" : "mêlée"})` : "(mains nues)"}
             </button>
           )}
 
-          {!character.dead && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
+          {!character.dead && !isTargeting && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
             <button onClick={() => onUseItem(healKit.id)}>Utiliser la Trousse de secours (-1 blessure)</button>
           )}
 
-          {!character.dead && character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
-          <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>
+          {!character.dead && !isTargeting && character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
+          {!isTargeting && <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>}
         </div>
       )}
     </aside>

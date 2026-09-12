@@ -274,6 +274,39 @@ export function canMove(board, from, to) {
   return true;
 }
 
+const RANGE_DIRS = [
+  { dx: 1, dy: 0, side: "east" },
+  { dx: -1, dy: 0, side: "west" },
+  { dx: 0, dy: 1, side: "south" },
+  { dx: 0, dy: -1, side: "north" },
+];
+
+// Cases visibles/atteignables en ligne droite depuis `from`, dans les 4
+// directions, jusqu'à `maxRange` cases (livret p.21 : "the Range... is the
+// number of Zones it can shoot across"). On s'arrête dès qu'on rencontre un
+// mur infranchissable ou une porte verrouillée (qui bloque la vue comme une
+// porte fermée dans les règles). Renvoie [{x, y, distance}].
+export function straightLineTargets(board, from, maxRange) {
+  const results = [];
+  for (const { dx, dy, side } of RANGE_DIRS) {
+    let x = from.x;
+    let y = from.y;
+    for (let dist = 1; dist <= maxRange; dist++) {
+      const cell = getCell(board, x, y);
+      if (!cell) break;
+      const wall = cell.walls[side];
+      if (wall === true) break;
+      if (wall && wall.door && wall.locked) break;
+      x += dx;
+      y += dy;
+      const nextCell = getCell(board, x, y);
+      if (!nextCell) break;
+      results.push({ x, y, distance: dist });
+    }
+  }
+  return results;
+}
+
 export function getZone(board, x, y) {
   const cell = getCell(board, x, y);
   return cell ? board.zones[cell.zoneId] : null;

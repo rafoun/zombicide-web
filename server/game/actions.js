@@ -1,4 +1,4 @@
-import { canMove, getDoorBetween } from "./board.js";
+import { canMove, getDoorBetween, straightLineTargets } from "./board.js";
 import { shuffle, maxActionsForAdrenaline } from "./decks.js";
 import { spawnZombies, activateZombies, ZOMBIE_TYPES } from "./zombies.js";
 import { checkGameEnd } from "./scenarios.js";
@@ -164,11 +164,6 @@ function handleAttack(state, playerSocketId, action) {
   if (!character || character.dead) return { ok: false, error: "Personnage indisponible." };
   if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
 
-  const zombiesHere = state.zombies.filter(
-    (z) => z.position.x === character.position.x && z.position.y === character.position.y
-  );
-  if (zombiesHere.length === 0) return { ok: false, error: "Aucun zombie dans ta zone." };
-
   // Le joueur choisit son arme s'il en a plusieurs (action.weaponId). Sans
   // précision, ou si le Survivant n'a aucune arme, il attaque à mains nues.
   const weapons = character.equipment.filter((e) => e.type === "weapon");
@@ -180,10 +175,35 @@ function handleAttack(state, playerSocketId, action) {
     weapon = weapons[0] || null;
   }
 
+  const mode = weapon ? weapon.mode : "melee"; // à mains nues = corps à corps
+
+  // Le corps à corps (et les mains nues) ne vise toujours que sa propre zone
+  // (pas de Portée). Le tir à distance vise la zone choisie par le joueur,
+  // à condition qu'elle soit dans la Portée de l'arme et en Ligne de Vue
+  // (livret p. 21). Sans zone précisée, on retombe sur sa propre zone
+  // (compatible avec les armes de Portée 0-x).
+  let target = { x: character.position.x, y: character.position.y };
+  if (mode === "ranged" && action.target) {
+    target = { x: action.target.x, y: action.target.y };
+    const [minRange, maxRange] = weapon.range || [0, 0];
+    const sameZone = target.x === character.position.x && target.y === character.position.y;
+    if (sameZone) {
+      if (minRange > 0) return { ok: false, error: "Cette arme ne peut pas tirer dans sa propre zone (Portée minimum non nulle)." };
+    } else {
+      const reachable = straightLineTargets(state.board, character.position, maxRange)
+        .find((t) => t.x === target.x && t.y === target.y);
+      if (!reachable || reachable.distance < minRange) {
+        return { ok: false, error: "Cette zone est hors de portée ou hors de vue." };
+      }
+    }
+  }
+
+  const zombiesHere = state.zombies.filter((z) => z.position.x === target.x && z.position.y === target.y);
+  if (zombiesHere.length === 0) return { ok: false, error: "Aucun zombie dans la zone visée." };
+
   const dice = weapon ? weapon.dice : 1;
   const accuracy = weapon ? weapon.accuracy : 4;
   const damage = weapon ? weapon.damage : 1;
-  const mode = weapon ? weapon.mode : "melee"; // à mains nues = corps à corps
 
   let hits = 0;
   let misses = 0;
@@ -196,15 +216,15 @@ function handleAttack(state, playerSocketId, action) {
   const events = [];
 
   // Tir Ami (règle p. 28) : uniquement pour le tir à distance. Chaque dé raté
-  // touche automatiquement un Survivant présent dans la zone visée (jamais
-  // l'attaquant lui-même), pour le Dégât de l'arme.
+  // touche automatiquement un Survivant présent dans la ZONE VISÉE (jamais
+  // l'attaquant lui-même), pour le Dégât de l'arme — même si cette zone
+  // n'est pas celle du tireur.
   if (mode === "ranged" && misses > 0) {
     for (let i = 0; i < misses; i++) {
       const bystanders = state.characters.filter(
-        (c) => !c.dead && c.playerId !== playerSocketId &&
-          c.position.x === character.position.x && c.position.y === character.position.y
+        (c) => !c.dead && c.playerId !== playerSocketId && c.position.x === target.x && c.position.y === target.y
       );
-      if (bystanders.length === 0) break; // plus personne à toucher dans la zone
+      if (bystanders.length === 0) break; // plus personne à toucher dans la zone visée
       const victim = bystanders[Math.floor(Math.random() * bystanders.length)];
       woundCharacter(victim, damage, events, `un tir ami de ${character.name}`);
     }

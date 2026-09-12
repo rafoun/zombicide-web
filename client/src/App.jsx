@@ -30,6 +30,8 @@ export default function App() {
   const [gameState, setGameState] = useState(null);
   const [logMessages, setLogMessages] = useState([]);
   const [error, setError] = useState("");
+  const [selectedWeaponId, setSelectedWeaponId] = useState(null);
+  const [isTargeting, setIsTargeting] = useState(false);
 
   useEffect(() => {
     socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
@@ -94,6 +96,22 @@ export default function App() {
       : [];
     const mission = { name: gameState.scenarioName, progress: missionProgress(gameState) };
 
+    const weapons = myCharacter ? myCharacter.equipment.filter((e) => e.type === "weapon") : [];
+    const activeWeapon = weapons.find((w) => w.id === selectedWeaponId) || weapons[0] || null;
+
+    function handleAttackClick() {
+      if (activeWeapon?.mode === "ranged") {
+        setIsTargeting(true); // il faut maintenant cliquer une case sur le plateau
+      } else {
+        socket.emit("game_action", { type: "attack", weaponId: activeWeapon?.id });
+      }
+    }
+
+    function handleConfirmTarget(x, y) {
+      socket.emit("game_action", { type: "attack", weaponId: activeWeapon?.id, target: { x, y } });
+      setIsTargeting(false);
+    }
+
     return (
       <div className="game-layout">
         {gameState.phase === "game_over" && (
@@ -107,10 +125,15 @@ export default function App() {
           character={myCharacter}
           isMyTurn={isMyTurn}
           zombiesHere={zombiesHere}
+          weapons={weapons}
+          selectedWeaponId={activeWeapon?.id || null}
+          onSelectWeapon={setSelectedWeaponId}
+          isTargeting={isTargeting}
+          onCancelTargeting={() => setIsTargeting(false)}
           onSearch={() => socket.emit("game_action", { type: "search" })}
-          onAttack={(weaponId) => socket.emit("game_action", { type: "attack", weaponId })}
+          onAttack={handleAttackClick}
           onUseItem={(itemId) => socket.emit("game_action", { type: "use_item", itemId })}
-          onEndTurn={() => socket.emit("game_action", { type: "end_turn" })}
+          onEndTurn={() => { setIsTargeting(false); socket.emit("game_action", { type: "end_turn" }); }}
           mission={mission}
         />
         <Board
@@ -118,6 +141,8 @@ export default function App() {
           mySocketId={socket.id}
           onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
           onForceDoor={(x, y) => socket.emit("game_action", { type: "force_door", x, y })}
+          targetingWeapon={isTargeting ? activeWeapon : null}
+          onConfirmTarget={handleConfirmTarget}
         />
         <div className="right-column">
           <InventoryPanel equipment={myCharacter?.equipment || []} />
