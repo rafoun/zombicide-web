@@ -9,26 +9,39 @@ const RANGE_DIRS = [
   { dx: 0, dy: -1, side: "north" },
 ];
 
-// Miroir client de la fonction serveur : cases visibles en ligne droite dans
-// les 4 directions, jusqu'à `maxRange`, bloquées par un mur plein ou une
-// porte verrouillée — sert uniquement à surligner les cases visables.
-function straightLineTargets(board, from, maxRange) {
+// Miroir client de la fonction serveur : cases atteignables en suivant les
+// passages ouverts (pas seulement en ligne droite), jusqu'à `maxRange`,
+// bloquées par un mur plein ou une porte verrouillée.
+function zonesInRange(board, from, maxRange) {
   const cellAt = (x, y) => board.cells.find((c) => c.x === x && c.y === y);
-  const results = [];
-  for (const { dx, dy, side } of RANGE_DIRS) {
-    let x = from.x, y = from.y;
-    for (let dist = 1; dist <= maxRange; dist++) {
-      const cell = cellAt(x, y);
-      if (!cell) break;
-      const wall = cell.walls[side];
-      if (wall === true) break;
-      if (wall && wall.door && wall.locked) break;
-      x += dx; y += dy;
-      if (!cellAt(x, y)) break;
-      results.push({ x, y, distance: dist });
+  const distances = new Map([[`${from.x},${from.y}`, 0]]);
+  let frontier = [from];
+
+  for (let dist = 1; dist <= maxRange && frontier.length > 0; dist++) {
+    const next = [];
+    for (const pos of frontier) {
+      const cell = cellAt(pos.x, pos.y);
+      if (!cell) continue;
+      for (const { dx, dy, side } of RANGE_DIRS) {
+        const nx = pos.x + dx, ny = pos.y + dy;
+        const key = `${nx},${ny}`;
+        if (distances.has(key)) continue;
+        const wall = cell.walls[side];
+        if (wall === true) continue;
+        if (wall && wall.door && wall.locked) continue;
+        if (!cellAt(nx, ny)) continue;
+        distances.set(key, dist);
+        next.push({ x: nx, y: ny });
+      }
     }
+    frontier = next;
   }
-  return results;
+
+  distances.delete(`${from.x},${from.y}`);
+  return Array.from(distances.entries()).map(([key, distance]) => {
+    const [x, y] = key.split(",").map(Number);
+    return { x, y, distance };
+  });
 }
 
 const ZOMBIE_TYPE_LABEL = {
@@ -67,7 +80,7 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
   const rangedTargets = (() => {
     if (!targetingWeapon || !myCharacter) return [];
     const [minRange, maxRange] = targetingWeapon.range || [0, 0];
-    const inRange = straightLineTargets(board, myCharacter.position, maxRange).filter((t) => t.distance >= minRange);
+    const inRange = zonesInRange(board, myCharacter.position, maxRange).filter((t) => t.distance >= minRange);
     if (minRange <= 0) inRange.push({ x: myCharacter.position.x, y: myCharacter.position.y, distance: 0 });
     return inRange.filter((t) => zombies.some((z) => z.position.x === t.x && z.position.y === t.y));
   })();

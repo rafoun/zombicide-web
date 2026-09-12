@@ -1,4 +1,4 @@
-import { canMove, getDoorBetween, straightLineTargets } from "./board.js";
+import { canMove, getDoorBetween, zonesInRange } from "./board.js";
 import { shuffle, maxActionsForAdrenaline } from "./decks.js";
 import { spawnZombies, activateZombies, ZOMBIE_TYPES } from "./zombies.js";
 import { checkGameEnd } from "./scenarios.js";
@@ -190,7 +190,7 @@ function handleAttack(state, playerSocketId, action) {
     if (sameZone) {
       if (minRange > 0) return { ok: false, error: "Cette arme ne peut pas tirer dans sa propre zone (Portée minimum non nulle)." };
     } else {
-      const reachable = straightLineTargets(state.board, character.position, maxRange)
+      const reachable = zonesInRange(state.board, character.position, maxRange)
         .find((t) => t.x === target.x && t.y === target.y);
       if (!reachable || reachable.distance < minRange) {
         return { ok: false, error: "Cette zone est hors de portée ou hors de vue." };
