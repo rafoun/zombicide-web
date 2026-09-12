@@ -36,7 +36,6 @@ export default function App() {
   const [isTargeting, setIsTargeting] = useState(false);
   const [diceResult, setDiceResult] = useState(null);
   const [zombiePhase, setZombiePhase] = useState(null);
-  const [zombiePhaseIndex, setZombiePhaseIndex] = useState(0);
 
   useEffect(() => {
     socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
@@ -44,7 +43,10 @@ export default function App() {
     socket.on("game_state", (state) => setGameState(state));
     socket.on("game_log", (messages) => setLogMessages((prev) => [...prev, ...messages].slice(-6)));
     socket.on("dice_result", (result) => setDiceResult(result));
-    socket.on("zombie_phase", (steps) => { setZombiePhase(steps); setZombiePhaseIndex(0); });
+    socket.on("zombie_phase", (steps) => {
+      const notable = steps.filter((s) => s.kind === "spawn" || s.kind === "abomination_extra" || s.kind === "bite");
+      if (notable.length > 0) setZombiePhase(steps);
+    });
 
     return () => {
       socket.off("room_update");
@@ -121,19 +123,10 @@ export default function App() {
       setIsTargeting(false);
     }
 
-    function handleNextZombieStep() {
-      if (zombiePhaseIndex + 1 >= zombiePhase.length) {
-        setZombiePhase(null);
-        setZombiePhaseIndex(0);
-      } else {
-        setZombiePhaseIndex((i) => i + 1);
-      }
-    }
-
     return (
       <div className="game-layout">
         {diceResult && <DiceRoll result={diceResult} onDone={() => setDiceResult(null)} />}
-        {zombiePhase && <ZombiePhaseViewer steps={zombiePhase} index={zombiePhaseIndex} onNext={handleNextZombieStep} />}
+        {zombiePhase && <ZombiePhaseViewer steps={zombiePhase} onDismiss={() => setZombiePhase(null)} />}
         {gameState.phase === "game_over" && (
           <div className={`game-over-banner game-over-banner--${gameState.gameOver?.result}`}>
             <strong>{gameState.gameOver?.result === "won" ? "Victoire !" : "Défaite..."}</strong>

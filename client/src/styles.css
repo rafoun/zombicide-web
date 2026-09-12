@@ -239,7 +239,10 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .dice-panel__result { margin: 0; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; }
 
 .zombie-phase-panel__title { margin: 0 0 0.75rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--bone-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-.zombie-phase-panel__step { margin: 0 0 1.25rem; font-size: 1rem; display: flex; align-items: center; gap: 0.6rem; justify-content: center; }
-.zombie-phase-icon { font-size: 1.3rem; }
+.zombie-phase-list { list-style: none; margin: 0 0 1.25rem; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; text-align: left; }
+.zombie-phase-list__item { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.85rem; }
+.zombie-phase-list__label { font-family: var(--font-mono); font-size: 0.65rem; text-transform: uppercase; color: var(--bone-dim); min-width: 4.5rem; }
+.zombie-phase-list__message { flex: 1; }
+.zombie-phase-icon { font-size: 1rem; }
 .zombie-phase-icon--bite { color: var(--blood-bright); }
 .zombie-phase-icon--spawn, .zombie-phase-icon--abomination_extra { color: var(--toxic-bright); }
