@@ -94,6 +94,8 @@ io.on("connection", (socket) => {
     if (result.ok) {
       io.to(room.code).emit("game_state", room.game);
       if (result.events?.length) io.to(room.code).emit("game_log", result.events);
+      if (result.zombiePhase?.length) io.to(room.code).emit("zombie_phase", result.zombiePhase);
+      if (result.diceResult) io.to(room.code).emit("dice_result", { playerId: socket.id, ...result.diceResult });
     }
     callback?.(result.ok ? { ok: true } : { ok: false, error: result.error });
   });

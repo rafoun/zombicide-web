@@ -51,12 +51,14 @@ function drawZombieCard(state) {
 // l'ordre (Zone de Départ du Spawn en premier, puis les autres — ici l'ordre
 // dans lequel chaque plateau les déclare, qui suit déjà une logique
 // géographique cohérente), au lieu de vider toute une table d'un coup.
+// Renvoie une liste d'étapes ({kind, message, ...détails}) — une par Zone de
+// Spawn traitée — pour que le client puisse les afficher une par une.
 export function spawnZombies(state) {
   const spawnCells = state.board.cells.filter((c) => c.isSpawnZone);
   if (spawnCells.length === 0) return [];
 
   const level = highestDangerLevel(state.characters);
-  const events = [];
+  const steps = [];
 
   for (const cell of spawnCells) {
     const card = drawZombieCard(state);
@@ -64,16 +66,24 @@ export function spawnZombies(state) {
 
     const zone = state.board.zones[cell.zoneId];
     const zoneLabel = zone?.label || "une zone de spawn";
+    const cellPos = { x: cell.x, y: cell.y };
 
     if (card.type === "abomination") {
       const hasAbomination = state.zombies.some((z) => z.type === "abomination");
       if (!hasAbomination) {
-        state.zombies.push(makeZombie("abomination", cell));
-        events.push(`Une Abomination apparaît (${zoneLabel}) !`);
+        const zombie = makeZombie("abomination", cell);
+        state.zombies.push(zombie);
+        steps.push({
+          kind: "spawn", zombieType: "abomination", count: 1, zoneLabel, cell: cellPos,
+          message: `Une Abomination apparaît (${zoneLabel}) !`,
+        });
       } else {
         state.pendingExtraActivations = state.pendingExtraActivations || [];
         state.pendingExtraActivations.push("abomination");
-        events.push("Carte Abomination piochée alors qu'il y en a déjà une : elle agira une fois de plus ce tour-ci.");
+        steps.push({
+          kind: "abomination_extra", zoneLabel,
+          message: "Carte Abomination piochée alors qu'il y en a déjà une : elle agira une fois de plus ce tour-ci.",
+        });
       }
       continue;
     }
@@ -81,10 +91,13 @@ export function spawnZombies(state) {
     const count = card.counts[level] ?? 0;
     if (count === 0) continue; // ex. carte Brute piochée en Bleu/Jaune : rien n'apparaît
     for (let n = 0; n < count; n++) state.zombies.push(makeZombie(card.type, cell));
-    events.push(`${count} ${ZOMBIE_TYPES[card.type].label}(s) apparaissent (${zoneLabel}).`);
+    steps.push({
+      kind: "spawn", zombieType: card.type, count, zoneLabel, cell: cellPos,
+      message: `${count} ${ZOMBIE_TYPES[card.type].label}(s) apparaissent (${zoneLabel}).`,
+    });
   }
 
-  return events;
+  return steps;
 }
 
 function neighbors(board, pos) {
@@ -119,42 +132,57 @@ function sameCell(a, b) {
   return a.x === b.x && a.y === b.y;
 }
 
-function biteRandomCharacter(charactersInCell, events) {
+function biteRandomCharacter(zombie, charactersInCell) {
   const target = charactersInCell[Math.floor(Math.random() * charactersInCell.length)];
   target.wounds += 1;
-  if (target.wounds >= 3) {
-    target.dead = true;
-    events.push(`${target.name} a été tué par un zombie.`);
-  } else {
-    events.push(`${target.name} a été mordu (${target.wounds}/3 blessures).`);
-  }
+  const characterDied = target.wounds >= 3;
+  if (characterDied) target.dead = true;
+  const label = ZOMBIE_TYPES[zombie.type].label;
+  return {
+    kind: "bite", zombieId: zombie.id, zombieType: zombie.type, at: { ...zombie.position },
+    targetPlayerId: target.playerId, targetName: target.name, characterDied,
+    message: characterDied
+      ? `${label} mord ${target.name}, qui succombe à ses blessures.`
+      : `${label} mord ${target.name} (${target.wounds}/3 blessures).`,
+  };
 }
 
 // Résout une seule Activation d'un zombie : ATTAQUE s'il partage la zone
 // d'un Survivant vivant, sinon DÉPLACEMENT d'une case vers le plus proche.
-// Renvoie false si plus personne n'est vivant (plus la peine de continuer).
-function activateOnce(zombie, state, events) {
+// Renvoie l'étape correspondante, ou null si plus personne n'est vivant
+// (plus la peine de continuer) ou si le zombie ne peut rien faire.
+function activateOnce(zombie, state) {
   const aliveCharacters = state.characters.filter((c) => !c.dead);
-  if (aliveCharacters.length === 0) return false;
+  if (aliveCharacters.length === 0) return null;
 
   const inSameCell = aliveCharacters.filter((c) => sameCell(c.position, zombie.position));
-  if (inSameCell.length > 0) {
-    biteRandomCharacter(inSameCell, events);
-    return true;
-  }
+  if (inSameCell.length > 0) return biteRandomCharacter(zombie, inSameCell);
 
   const step = nextStepToward(state.board, zombie.position, aliveCharacters.map((c) => c.position));
-  if (step) zombie.position = step;
-  return true;
+  if (step) {
+    const from = { ...zombie.position };
+    zombie.position = step;
+    return {
+      kind: "move", zombieId: zombie.id, zombieType: zombie.type, from, to: { ...step },
+      message: `${ZOMBIE_TYPES[zombie.type].label} se déplace.`,
+    };
+  }
+
+  return {
+    kind: "idle", zombieId: zombie.id, zombieType: zombie.type, at: { ...zombie.position },
+    message: `${ZOMBIE_TYPES[zombie.type].label} ne peut ni bouger ni attaquer.`,
+  };
 }
 
 export function activateZombies(state) {
-  const events = [];
+  const steps = [];
 
   for (const zombie of state.zombies) {
     const actions = ZOMBIE_TYPES[zombie.type]?.actionsPerActivation || 1;
     for (let a = 0; a < actions; a++) {
-      if (!activateOnce(zombie, state, events)) return events;
+      const step = activateOnce(zombie, state);
+      if (!step) return steps; // plus personne de vivant : inutile de continuer
+      steps.push(step);
     }
   }
 
@@ -165,9 +193,10 @@ export function activateZombies(state) {
   state.pendingExtraActivations = [];
   for (const type of pending) {
     for (const zombie of state.zombies.filter((z) => z.type === type)) {
-      activateOnce(zombie, state, events);
+      const step = activateOnce(zombie, state);
+      if (step) steps.push(step);
     }
   }
 
-  return events;
+  return steps;
 }

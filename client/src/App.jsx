@@ -4,6 +4,8 @@ import Board from "./Board.jsx";
 import PlayerPanel from "./PlayerPanel.jsx";
 import InventoryPanel from "./InventoryPanel.jsx";
 import EventLog from "./EventLog.jsx";
+import DiceRoll from "./DiceRoll.jsx";
+import ZombiePhaseViewer from "./ZombiePhaseViewer.jsx";
 
 function missionProgress(gameState) {
   const alive = gameState.characters.filter((c) => !c.dead);
@@ -32,18 +34,25 @@ export default function App() {
   const [error, setError] = useState("");
   const [selectedWeaponId, setSelectedWeaponId] = useState(null);
   const [isTargeting, setIsTargeting] = useState(false);
+  const [diceResult, setDiceResult] = useState(null);
+  const [zombiePhase, setZombiePhase] = useState(null);
+  const [zombiePhaseIndex, setZombiePhaseIndex] = useState(0);
 
   useEffect(() => {
     socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
     socket.on("game_started", (state) => setGameState(state));
     socket.on("game_state", (state) => setGameState(state));
     socket.on("game_log", (messages) => setLogMessages((prev) => [...prev, ...messages].slice(-6)));
+    socket.on("dice_result", (result) => setDiceResult(result));
+    socket.on("zombie_phase", (steps) => { setZombiePhase(steps); setZombiePhaseIndex(0); });
 
     return () => {
       socket.off("room_update");
       socket.off("game_started");
       socket.off("game_state");
       socket.off("game_log");
+      socket.off("dice_result");
+      socket.off("zombie_phase");
     };
   }, []);
 
@@ -112,8 +121,19 @@ export default function App() {
       setIsTargeting(false);
     }
 
+    function handleNextZombieStep() {
+      if (zombiePhaseIndex + 1 >= zombiePhase.length) {
+        setZombiePhase(null);
+        setZombiePhaseIndex(0);
+      } else {
+        setZombiePhaseIndex((i) => i + 1);
+      }
+    }
+
     return (
       <div className="game-layout">
+        {diceResult && <DiceRoll result={diceResult} onDone={() => setDiceResult(null)} />}
+        {zombiePhase && <ZombiePhaseViewer steps={zombiePhase} index={zombiePhaseIndex} onNext={handleNextZombieStep} />}
         {gameState.phase === "game_over" && (
           <div className={`game-over-banner game-over-banner--${gameState.gameOver?.result}`}>
             <strong>{gameState.gameOver?.result === "won" ? "Victoire !" : "Défaite..."}</strong>

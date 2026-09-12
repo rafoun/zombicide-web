@@ -207,8 +207,11 @@ function handleAttack(state, playerSocketId, action) {
 
   let hits = 0;
   let misses = 0;
+  const rolls = [];
   for (let i = 0; i < dice; i++) {
-    if (Math.floor(Math.random() * 6) + 1 >= accuracy) hits += 1;
+    const roll = Math.floor(Math.random() * 6) + 1;
+    rolls.push(roll);
+    if (roll >= accuracy) hits += 1;
     else misses += 1;
   }
 
@@ -230,9 +233,11 @@ function handleAttack(state, playerSocketId, action) {
     }
   }
 
+  const diceResult = { rolls, accuracy, hits, misses, weaponName: weapon?.name || "Mains nues" };
+
   if (hits === 0) {
     events.unshift(`${character.name} a raté son attaque.`);
-    return { ok: true, state, events };
+    return { ok: true, state, events, diceResult };
   }
 
   // Ordre d'attribution des touches : imposé (Priorité) en tir à distance,
@@ -254,7 +259,7 @@ function handleAttack(state, playerSocketId, action) {
     events.unshift(`${character.name} touche mais son arme est trop faible pour ces zombies.`);
   }
 
-  return { ok: true, state, events };
+  return { ok: true, state, events, diceResult };
 }
 
 // Prochain personnage vivant à partir de `fromIndex` (inclus) dans l'ordre du
@@ -281,8 +286,8 @@ function handleEndTurn(state) {
 
   // Plus personne de vivant après nous dans l'ordre : fin de manche.
   state.phase = "zombie_turn";
-  const spawnEvents = spawnZombies(state);
-  const activationEvents = activateZombies(state);
+  const spawnSteps = spawnZombies(state);
+  const activationSteps = activateZombies(state);
   state.phase = "player_turn";
   state.round += 1;
 
@@ -293,5 +298,11 @@ function handleEndTurn(state) {
     first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
   }
 
-  return { ok: true, state, events: [...spawnEvents, ...activationEvents] };
+  const zombiePhaseSteps = [...spawnSteps, ...activationSteps];
+  return {
+    ok: true,
+    state,
+    events: zombiePhaseSteps.map((s) => s.message),
+    zombiePhase: zombiePhaseSteps, // pour que le client rejoue chaque étape une par une
+  };
 }
