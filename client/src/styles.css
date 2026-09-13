@@ -189,19 +189,12 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 
 .app--lobby { max-width: 640px; }
 
-.scenario-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
-.scenario-card {
-  text-align: left; background: var(--panel-bg); border: 1px solid var(--panel-border);
-  padding: 0.9rem 1.1rem; border-radius: 2px; color: var(--bone); display: flex; flex-direction: column; gap: 0.35rem;
+.scenario-select {
+  width: 100%; padding: 0.6rem 0.7rem; font-family: var(--font-body); font-size: 0.95rem;
+  background: var(--panel-bg); border: 1px solid var(--panel-border); color: var(--bone); border-radius: 2px;
+  margin-bottom: 0.75rem;
 }
-.scenario-card:hover:not(:disabled) { border-color: var(--toxic); }
-.scenario-card:disabled { cursor: default; opacity: 0.85; }
-.scenario-card--selected { border-color: var(--toxic-bright); background: var(--panel-bg-raised); }
-.scenario-card__header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
-.scenario-card__name { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 1.05rem; }
-.scenario-card__meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--bone-dim); white-space: nowrap; }
-.scenario-card__flavor { margin: 0; font-size: 0.85rem; color: var(--bone-dim); line-height: 1.4; }
-
+.scenario-detail__flavor { font-size: 0.85rem; color: var(--bone-dim); font-style: italic; margin: 0 0 0.5rem; }
 .scenario-rules { font-size: 0.82rem; color: var(--bone-dim); line-height: 1.5; margin: 0 0 1.25rem; padding-left: 1.2rem; }
 
 .player-list { list-style: none; padding: 0; margin: 0 0 1.25rem; font-size: 0.9rem; }

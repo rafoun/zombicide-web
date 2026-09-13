@@ -223,27 +223,24 @@ export default function App() {
         </div>
 
         <h2>Scénario</h2>
-        <div className="scenario-list">
+        <select
+          className="scenario-select"
+          value={room.scenarioId || ""}
+          disabled={!isHost}
+          onChange={(e) => handleSelectScenario(e.target.value)}
+        >
           {scenarios.map((s) => (
-            <button
-              key={s.id}
-              className={`scenario-card ${s.id === room.scenarioId ? "scenario-card--selected" : ""}`}
-              disabled={!isHost}
-              onClick={() => handleSelectScenario(s.id)}
-            >
-              <div className="scenario-card__header">
-                <span className="scenario-card__name">{s.name}</span>
-                <span className="scenario-card__meta">{s.difficulty} · {s.time}</span>
-              </div>
-              <p className="scenario-card__flavor">{s.flavor}</p>
-            </button>
+            <option key={s.id} value={s.id}>{s.name} — {s.difficulty} · {s.time}</option>
           ))}
-        </div>
+        </select>
 
         {selectedScenario && (
-          <ul className="scenario-rules">
-            {selectedScenario.specialRules.map((rule, i) => <li key={i}>{rule}</li>)}
-          </ul>
+          <div className="scenario-detail">
+            <p className="scenario-detail__flavor">{selectedScenario.flavor}</p>
+            <ul className="scenario-rules">
+              {selectedScenario.specialRules.map((rule, i) => <li key={i}>{rule}</li>)}
+            </ul>
+          </div>
         )}
 
         {isHost ? (
