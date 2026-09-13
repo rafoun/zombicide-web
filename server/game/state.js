@@ -27,6 +27,7 @@ export function createInitialGameState(players, scenarioId) {
       adrenaline: 0, // Points d'Adrénaline (PA) -> niveau de danger personnel
       equipment: [],
       actionsLeft: maxActionsForAdrenaline(0),
+      searchedThisTurn: false, // une seule Fouille par tour, même gratuite (livret p. 19)
       zombieKills: 0,
       objectives: 0,
     })),

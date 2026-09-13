@@ -107,6 +107,9 @@ export default function App() {
       : [];
     const mission = { name: gameState.scenarioName, progress: missionProgress(gameState) };
 
+    const myCell = myCharacter && gameState.board.cells.find((c) => c.x === myCharacter.position.x && c.y === myCharacter.position.y);
+    const canSearch = Boolean(myCell?.building) && zombiesHere.length === 0 && !myCharacter?.searchedThisTurn;
+
     const weapons = myCharacter ? myCharacter.equipment.filter((e) => e.type === "weapon") : [];
     const activeWeapon = weapons.find((w) => w.id === selectedWeaponId) || weapons[0] || null;
 
@@ -138,6 +141,7 @@ export default function App() {
           character={myCharacter}
           isMyTurn={isMyTurn}
           zombiesHere={zombiesHere}
+          canSearch={canSearch}
           weapons={weapons}
           selectedWeaponId={activeWeapon?.id || null}
           onSelectWeapon={setSelectedWeaponId}

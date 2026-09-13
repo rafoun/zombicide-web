@@ -21,7 +21,7 @@ function zombieSummary(zombiesHere) {
 
 export default function PlayerPanel({
   character, isMyTurn, zombiesHere, weapons, selectedWeaponId, onSelectWeapon,
-  isTargeting, onCancelTargeting, onSearch, onAttack, onUseItem, onEndTurn, mission,
+  isTargeting, onCancelTargeting, onSearch, onAttack, onUseItem, onEndTurn, mission, canSearch,
 }) {
   if (!character) return null;
 
@@ -111,7 +111,7 @@ export default function PlayerPanel({
             <button onClick={() => onUseItem(healKit.id)}>Utiliser la Trousse de secours (-1 blessure)</button>
           )}
 
-          {!character.dead && !isTargeting && character.actionsLeft > 0 && <button onClick={onSearch}>Fouiller</button>}
+          {!character.dead && !isTargeting && character.actionsLeft > 0 && canSearch && <button onClick={onSearch}>Fouiller</button>}
           {!isTargeting && <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>}
         </div>
       )}

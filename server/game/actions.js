@@ -1,4 +1,4 @@
-import { canMove, getDoorBetween, zonesInRange } from "./board.js";
+import { canMove, getDoorBetween, zonesInRange, getCell } from "./board.js";
 import { shuffle, maxActionsForAdrenaline } from "./decks.js";
 import { spawnZombies, activateZombies, ZOMBIE_TYPES } from "./zombies.js";
 import { checkGameEnd } from "./scenarios.js";
@@ -65,7 +65,14 @@ function handleSearch(state, playerSocketId) {
   if (!character || character.dead) return { ok: false, error: "Personnage indisponible." };
   if (character.actionsLeft <= 0) return { ok: false, error: "Plus d'actions ce tour-ci." };
 
-  // TODO: restreindre aux zones "bâtiment" une fois les tuiles enrichies (règle officielle).
+  // La Fouille (livret p. 19) : seulement dans une zone "bâtiment", seulement
+  // s'il n'y a aucun zombie dans la zone, et une seule fois par tour.
+  const cell = getCell(state.board, character.position.x, character.position.y);
+  if (!cell?.building) return { ok: false, error: "Tu ne peux fouiller que dans un bâtiment." };
+  if (character.searchedThisTurn) return { ok: false, error: "Une seule Fouille par tour." };
+  const zombiesHere = state.zombies.some((z) => z.position.x === character.position.x && z.position.y === character.position.y);
+  if (zombiesHere) return { ok: false, error: "Impossible de fouiller : il y a des zombies dans cette zone." };
+
   if (state.decks.equipmentDeck.length === 0) {
     if (state.decks.discardEquipment.length === 0) {
       return { ok: false, error: "Plus aucune carte équipement disponible." };
@@ -77,6 +84,7 @@ function handleSearch(state, playerSocketId) {
   const card = state.decks.equipmentDeck.pop();
   character.equipment.push(card);
   character.actionsLeft -= 1;
+  character.searchedThisTurn = true;
   return { ok: true, state };
 }
 
@@ -281,6 +289,7 @@ function handleEndTurn(state) {
     state.currentTurnIndex = nextIndex;
     const next = state.characters[nextIndex];
     next.actionsLeft = maxActionsForAdrenaline(next.adrenaline);
+    next.searchedThisTurn = false;
     return { ok: true, state };
   }
 
@@ -296,6 +305,7 @@ function handleEndTurn(state) {
     state.currentTurnIndex = firstIndex;
     const first = state.characters[firstIndex];
     first.actionsLeft = maxActionsForAdrenaline(first.adrenaline);
+    first.searchedThisTurn = false;
   }
 
   const zombiePhaseSteps = [...spawnSteps, ...activationSteps];
