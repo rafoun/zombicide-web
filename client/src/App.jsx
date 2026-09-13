@@ -6,6 +6,7 @@ import InventoryPanel from "./InventoryPanel.jsx";
 import EventLog from "./EventLog.jsx";
 import DiceRoll from "./DiceRoll.jsx";
 import ZombiePhaseViewer from "./ZombiePhaseViewer.jsx";
+import GameOverScreen from "./GameOverScreen.jsx";
 
 function missionProgress(gameState) {
   const alive = gameState.characters.filter((c) => !c.dead);
@@ -104,6 +105,10 @@ export default function App() {
   const isHost = room && socket.id === room.hostSocketId;
 
   if (gameState) {
+    if (gameState.phase === "game_over") {
+      return <GameOverScreen gameState={gameState} isHost={isHost} onPlayAgain={handlePlayAgain} />;
+    }
+
     const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
     const isMyTurn = currentPlayerId === socket.id;
     const myCharacter = gameState.characters.find((c) => c.playerId === socket.id);
@@ -140,13 +145,6 @@ export default function App() {
       <div className="game-layout">
         {diceResult && <DiceRoll result={diceResult} onDone={() => setDiceResult(null)} />}
         {zombiePhase && <ZombiePhaseViewer steps={zombiePhase} onDismiss={() => setZombiePhase(null)} />}
-        {gameState.phase === "game_over" && (
-          <div className={`game-over-banner game-over-banner--${gameState.gameOver?.result}`}>
-            <strong>{gameState.gameOver?.result === "won" ? "Victoire !" : "Défaite..."}</strong>
-            <span>{gameState.gameOver?.reason}</span>
-            {isHost && <button onClick={handlePlayAgain}>Retour au salon</button>}
-          </div>
-        )}
         <PlayerPanel
           character={myCharacter}
           isMyTurn={isMyTurn}

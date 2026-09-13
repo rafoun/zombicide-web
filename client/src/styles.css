@@ -219,14 +219,37 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .character-card__skill--red { border-left-color: var(--wound-red); }
 .character-card__skill strong { color: var(--bone); font-weight: 600; }
 
-.game-over-banner {
-  grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 1rem;
-  padding: 1rem; margin-bottom: 0.5rem; border-radius: 2px; font-family: var(--font-display);
-  text-transform: uppercase; letter-spacing: 0.04em;
+.game-over-screen {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem; background: var(--bg-void);
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(143, 29, 29, 0.08), transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(111, 138, 52, 0.06), transparent 45%);
 }
-.game-over-banner--won { background: rgba(111, 138, 52, 0.18); border: 1px solid var(--toxic-bright); color: var(--toxic-bright); }
-.game-over-banner--lost { background: rgba(143, 29, 29, 0.18); border: 1px solid var(--blood-bright); color: var(--blood-bright); }
-.game-over-banner span { font-family: var(--font-body); text-transform: none; letter-spacing: normal; color: var(--bone); }
+.game-over-screen__panel {
+  max-width: 420px; width: 100%; text-align: center; padding: 2rem 1.75rem;
+  background: var(--panel-bg-raised); border-radius: 4px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.game-over-screen__panel--won { border: 1px solid var(--toxic-bright); }
+.game-over-screen__panel--lost { border: 1px solid var(--blood-bright); }
+.game-over-screen__scenario { display: block; font-family: var(--font-mono); font-size: 0.75rem; color: var(--bone-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+.game-over-screen__title { font-size: 2.4rem; margin: 0 0 0.5rem; }
+.game-over-screen__panel--won .game-over-screen__title { color: var(--toxic-bright); }
+.game-over-screen__panel--lost .game-over-screen__title { color: var(--blood-bright); }
+.game-over-screen__reason { color: var(--bone-dim); margin: 0 0 1.5rem; font-size: 0.9rem; }
+.game-over-screen__summary { display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 1.5rem; }
+.game-over-screen__stat { display: block; font-family: var(--font-display); font-size: 2rem; color: var(--bone); }
+.game-over-screen__stat-label { font-size: 0.7rem; color: var(--bone-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.game-over-screen__list { list-style: none; margin: 0 0 1.75rem; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; text-align: left; }
+.game-over-screen__character {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem;
+  background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 2px; font-size: 0.85rem;
+}
+.game-over-screen__character--dead { opacity: 0.6; }
+.game-over-screen__name { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; flex: 1; text-align: left; }
+.game-over-screen__status { color: var(--bone-dim); font-family: var(--font-mono); font-size: 0.75rem; }
+.game-over-screen__kills { color: var(--toxic-bright); font-family: var(--font-mono); font-size: 0.8rem; min-width: 3.5rem; text-align: right; }
+.game-over-screen__waiting { color: var(--bone-dim); font-size: 0.85rem; margin: 0; }
 
 .mission-box {
   display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem;
