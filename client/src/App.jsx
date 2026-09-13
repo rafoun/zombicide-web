@@ -34,6 +34,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [selectedWeaponId, setSelectedWeaponId] = useState(null);
   const [isTargeting, setIsTargeting] = useState(false);
+  const [isJumping, setIsJumping] = useState(false);
   const [diceResult, setDiceResult] = useState(null);
   const [zombiePhase, setZombiePhase] = useState(null);
 
@@ -91,6 +92,10 @@ export default function App() {
     socket.emit("select_scenario", { scenarioId });
   }
 
+  function handleSelectCharacter(characterId) {
+    socket.emit("select_character", { characterId });
+  }
+
   function handlePlayAgain() {
     setGameState(null);
     setLogMessages([]);
@@ -122,6 +127,11 @@ export default function App() {
     }
 
     function handleConfirmTarget(x, y) {
+      if (isJumping) {
+        socket.emit("game_action", { type: "jump", x, y });
+        setIsJumping(false);
+        return;
+      }
       socket.emit("game_action", { type: "attack", weaponId: activeWeapon?.id, target: { x, y } });
       setIsTargeting(false);
     }
@@ -146,11 +156,14 @@ export default function App() {
           selectedWeaponId={activeWeapon?.id || null}
           onSelectWeapon={setSelectedWeaponId}
           isTargeting={isTargeting}
-          onCancelTargeting={() => setIsTargeting(false)}
+          isJumping={isJumping}
+          onCancelTargeting={() => { setIsTargeting(false); setIsJumping(false); }}
           onSearch={() => socket.emit("game_action", { type: "search" })}
           onAttack={handleAttackClick}
           onUseItem={(itemId) => socket.emit("game_action", { type: "use_item", itemId })}
-          onEndTurn={() => { setIsTargeting(false); socket.emit("game_action", { type: "end_turn" }); }}
+          onJump={() => setIsJumping(true)}
+          onImprovisedMelee={() => socket.emit("game_action", { type: "improvised_melee" })}
+          onEndTurn={() => { setIsTargeting(false); setIsJumping(false); socket.emit("game_action", { type: "end_turn" }); }}
           mission={mission}
         />
         <Board
@@ -158,7 +171,7 @@ export default function App() {
           mySocketId={socket.id}
           onMoveTo={(x, y) => socket.emit("game_action", { type: "move", x, y })}
           onForceDoor={(x, y) => socket.emit("game_action", { type: "force_door", x, y })}
-          targetingWeapon={isTargeting ? activeWeapon : null}
+          targetingWeapon={isJumping ? { name: "Jump", range: [2, 2] } : (isTargeting ? activeWeapon : null)}
           onConfirmTarget={handleConfirmTarget}
         />
         <div className="right-column">
@@ -172,12 +185,42 @@ export default function App() {
   if (room) {
     const scenarios = room.scenarios || [];
     const selectedScenario = scenarios.find((s) => s.id === room.scenarioId) || scenarios[0];
+    const characters = room.characters || [];
+    const me = room.players.find((p) => p.socketId === socket.id);
 
     return (
       <div className="app app--lobby">
         <h1>Salon {room.code}</h1>
         <p>Partage ce code à tes amis pour qu'ils rejoignent.</p>
-        <ul>{room.players.map((p, i) => <li key={i}>{p.name}</li>)}</ul>
+        <ul className="player-list">
+          {room.players.map((p, i) => {
+            const pc = characters.find((c) => c.id === p.characterId);
+            return <li key={i}>{p.name} {pc ? <span className="player-list__character">— {pc.name}</span> : <span className="player-list__character player-list__character--pending">— pas encore choisi</span>}</li>;
+          })}
+        </ul>
+
+        <h2>Ton Survivant</h2>
+        <div className="character-list">
+          {characters.map((c) => (
+            <button
+              key={c.id}
+              className={`character-card ${c.id === me?.characterId ? "character-card--selected" : ""}`}
+              onClick={() => handleSelectCharacter(c.id)}
+            >
+              <div className="character-card__header">
+                <span className="character-card__name">{c.name}</span>
+                <span className="character-card__tagline">{c.tagline}</span>
+              </div>
+              <ul className="character-card__skills">
+                {["blue", "yellow", "orange", "red"].map((tier) => (
+                  <li key={tier} className={`character-card__skill character-card__skill--${tier}`}>
+                    <strong>{c.skills[tier].name}</strong> — {c.skills[tier].description}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          ))}
+        </div>
 
         <h2>Scénario</h2>
         <div className="scenario-list">

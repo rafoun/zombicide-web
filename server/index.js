@@ -5,6 +5,7 @@ import { customAlphabet } from "nanoid";
 import { createInitialGameState } from "./game/state.js";
 import { applyAction } from "./game/actions.js";
 import { scenarioSummaries, SCENARIOS } from "./game/scenarios.js";
+import { CHARACTERS } from "./game/characters.js";
 
 const nanoid = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 5);
 
@@ -23,9 +24,10 @@ function roomSummary(room) {
     code: room.code,
     hostSocketId: room.hostSocketId,
     status: room.status,
-    players: room.players.map((p) => ({ name: p.name })),
+    players: room.players.map((p) => ({ socketId: p.socketId, name: p.name, characterId: p.characterId || null })),
     scenarioId: room.scenarioId,
     scenarios: scenarioSummaries(),
+    characters: CHARACTERS,
   };
 }
 
@@ -70,6 +72,16 @@ io.on("connection", (socket) => {
     if (!room || room.hostSocketId !== socket.id || room.status !== "lobby") return;
     if (!SCENARIOS.some((s) => s.id === scenarioId)) return;
     room.scenarioId = scenarioId;
+    broadcastRoom(room);
+  });
+
+  socket.on("select_character", ({ characterId }) => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.status !== "lobby") return;
+    if (!CHARACTERS.some((c) => c.id === characterId)) return;
+    const player = room.players.find((p) => p.socketId === socket.id);
+    if (!player) return;
+    player.characterId = characterId;
     broadcastRoom(room);
   });
 

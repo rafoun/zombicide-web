@@ -8,6 +8,7 @@
 
 import { canMove } from "./board.js";
 import { shuffle, dangerLevelForAdrenaline } from "./decks.js";
+import { hasSkill } from "./characters.js";
 
 export const ZOMBIE_TYPES = {
   walker: { label: "Marcheur", killDamage: 1, adrenaline: 1, actionsPerActivation: 1 },
@@ -134,10 +135,30 @@ function sameCell(a, b) {
 
 function biteRandomCharacter(zombie, charactersInCell) {
   const target = charactersInCell[Math.floor(Math.random() * charactersInCell.length)];
+  const label = ZOMBIE_TYPES[zombie.type].label;
+
+  // Dreadnought: Walker (Diego) : ignore complètement les blessures des Marcheurs.
+  if (zombie.type === "walker" && hasSkill(target, "dreadnought_walker")) {
+    return {
+      kind: "bite", zombieId: zombie.id, zombieType: zombie.type, at: { ...zombie.position },
+      targetPlayerId: target.playerId, targetName: target.name, characterDied: false,
+      message: `${label} mord ${target.name}, qui ignore la blessure (Dreadnought: Walker).`,
+    };
+  }
+
+  // Tough (Marco) : ignore la 1ère blessure de la manche.
+  if (hasSkill(target, "tough") && !target.toughUsedThisPhase) {
+    target.toughUsedThisPhase = true;
+    return {
+      kind: "bite", zombieId: zombie.id, zombieType: zombie.type, at: { ...zombie.position },
+      targetPlayerId: target.playerId, targetName: target.name, characterDied: false,
+      message: `${label} mord ${target.name}, qui encaisse sans broncher (Tough).`,
+    };
+  }
+
   target.wounds += 1;
   const characterDied = target.wounds >= 3;
   if (characterDied) target.dead = true;
-  const label = ZOMBIE_TYPES[zombie.type].label;
   return {
     kind: "bite", zombieId: zombie.id, zombieType: zombie.type, at: { ...zombie.position },
     targetPlayerId: target.playerId, targetName: target.name, characterDied,

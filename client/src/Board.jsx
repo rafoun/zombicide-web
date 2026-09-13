@@ -76,10 +76,14 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
   }
 
   // Cases que l'arme en cours de visée peut effectivement atteindre (portée +
-  // ligne de vue), et qui contiennent au moins un zombie à viser.
+  // ligne de vue), et qui contiennent au moins un zombie à viser — sauf pour
+  // Jump, qui vise une case vide exactement à 2 zones (ce n'est pas un tir).
   const rangedTargets = (() => {
     if (!targetingWeapon || !myCharacter) return [];
     const [minRange, maxRange] = targetingWeapon.range || [0, 0];
+    if (targetingWeapon.isJump) {
+      return zonesInRange(board, myCharacter.position, maxRange).filter((t) => t.distance === maxRange);
+    }
     const inRange = zonesInRange(board, myCharacter.position, maxRange).filter((t) => t.distance >= minRange);
     if (minRange <= 0) inRange.push({ x: myCharacter.position.x, y: myCharacter.position.y, distance: 0 });
     return inRange.filter((t) => zombies.some((z) => z.position.x === t.x && z.position.y === t.y));
@@ -152,8 +156,8 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
 
       {targetingWeapon && (
         <p className="targeting-hint">
-          Visée avec {targetingWeapon.name} (Portée {targetingWeapon.range?.[0] ?? 0}-{targetingWeapon.range?.[1] ?? 0}) :
-          {rangedTargets.length > 0 ? " clique une zone en surbrillance." : " aucun zombie à portée."}
+          {targetingWeapon.isJump ? "Jump" : `Visée avec ${targetingWeapon.name}`} (Portée {targetingWeapon.range?.[0] ?? 0}-{targetingWeapon.range?.[1] ?? 0}) :
+          {rangedTargets.length > 0 ? " clique une zone en surbrillance." : targetingWeapon.isJump ? " aucune zone atteignable." : " aucun zombie à portée."}
         </p>
       )}
 

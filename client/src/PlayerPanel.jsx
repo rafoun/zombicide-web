@@ -19,9 +19,19 @@ function zombieSummary(zombiesHere) {
     .join(", ");
 }
 
+const TIER_ORDER = ["blue", "yellow", "orange", "red"];
+
+function unlockedSkills(character) {
+  if (!character?.skillTree) return [];
+  const level = dangerLevel(character.adrenaline);
+  const idx = TIER_ORDER.indexOf(level);
+  return TIER_ORDER.slice(0, idx + 1).map((tier) => character.skillTree[tier]);
+}
+
 export default function PlayerPanel({
   character, isMyTurn, zombiesHere, weapons, selectedWeaponId, onSelectWeapon,
   isTargeting, onCancelTargeting, onSearch, onAttack, onUseItem, onEndTurn, mission, canSearch,
+  isJumping, onJump, onImprovisedMelee,
 }) {
   if (!character) return null;
 
@@ -29,10 +39,13 @@ export default function PlayerPanel({
   const level = dangerLevel(character.adrenaline);
   const activeWeapon = weapons.find((w) => w.id === selectedWeaponId) || weapons[0] || null;
   const healKit = character.equipment.find((e) => e.effect === "heal");
+  const skills = unlockedSkills(character);
+  const skillIds = skills.map((s) => s.id);
   // Le corps à corps (et les mains nues) ne visent que sa propre zone ; le tir
   // à distance peut viser une zone éloignée, donc le bouton reste disponible
   // même sans zombie dans SA zone (on choisira la cible sur le plateau).
   const canAttack = activeWeapon?.mode === "ranged" || zombiesHere.length > 0;
+  const isTargetingAnything = isTargeting || isJumping;
 
   return (
     <aside className="player-panel">
@@ -77,13 +90,20 @@ export default function PlayerPanel({
         <p className="kill-total">{character.zombieKills}</p>
       </div>
 
+      <div className="stat-block">
+        <span className="stat-block__label">Compétences ({level})</span>
+        <ul className="skill-list">
+          {skills.map((s) => <li key={s.id} className="skill-list__item"><strong>{s.name}</strong> — {s.description}</li>)}
+        </ul>
+      </div>
+
       {isMyTurn && (
         <div className="player-panel__actions">
           {!character.dead && zombiesHere.length > 0 && (
             <p className="zombies-here">Zombies ici : {zombieSummary(zombiesHere)}</p>
           )}
 
-          {!character.dead && !isTargeting && weapons.length > 1 && (
+          {!character.dead && !isTargetingAnything && weapons.length > 1 && (
             <select
               className="weapon-select"
               value={activeWeapon?.id || ""}
@@ -97,22 +117,31 @@ export default function PlayerPanel({
             </select>
           )}
 
-          {!character.dead && isTargeting && (
+          {!character.dead && isTargetingAnything && (
             <button className="button--secondary" onClick={onCancelTargeting}>Annuler la visée</button>
           )}
 
-          {!character.dead && !isTargeting && character.actionsLeft > 0 && canAttack && (
+          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && canAttack && (
             <button onClick={onAttack}>
               Attaquer {activeWeapon ? `(${activeWeapon.name}, ${activeWeapon.mode === "ranged" ? "distance" : "mêlée"})` : "(mains nues)"}
             </button>
           )}
 
-          {!character.dead && !isTargeting && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
+          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
             <button onClick={() => onUseItem(healKit.id)}>Utiliser la Trousse de secours (-1 blessure)</button>
           )}
 
-          {!character.dead && !isTargeting && character.actionsLeft > 0 && canSearch && <button onClick={onSearch}>Fouiller</button>}
-          {!isTargeting && <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>}
+          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && canSearch && <button onClick={onSearch}>Fouiller</button>}
+
+          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && skillIds.includes("jump") && (
+            <button onClick={onJump}>Sauter 2 zones (Jump)</button>
+          )}
+
+          {!character.dead && !isTargetingAnything && skillIds.includes("improvised_melee") && !character.improvisedUsedThisTurn && zombiesHere.length > 0 && (
+            <button onClick={onImprovisedMelee}>Attaque de fortune (gratuite, 1×/tour)</button>
+          )}
+
+          {!isTargetingAnything && <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>}
         </div>
       )}
     </aside>
