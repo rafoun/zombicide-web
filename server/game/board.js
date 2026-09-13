@@ -259,6 +259,160 @@ export function createBoardHighway() {
   return board;
 }
 
+// ============================================================================
+// PLATEAUX DE VRAIES MISSIONS DU LIVRET (section MISSIONS, p. 36+)
+// ============================================================================
+// Reconstitués à partir des cartes visuelles imprimées dans le livret (tuiles
+// numérotées 1V-9V/1R-9R assemblées en grille). Même convention que les 3
+// plateaux ci-dessus : 6x6 cases par tuile. Fidélité honnête : l'agencement
+// général (tuiles, bâtiments vs rues, zones de spawn, sortie, départ,
+// objectifs) suit vraiment l'image du livret ; le détail exact de chaque
+// petite pièce à l'intérieur d'une tuile est une simplification (comme pour
+// les 3 plateaux précédents), pas un tracé mur-par-mur pixel-perfect.
+// Les mécaniques non supportées par ce moteur (voitures, tokens de bruit,
+// cartes nourriture) sont omises ; seule la géographie du plateau est reprise.
+
+// --- M0 : Zombicide Life (Tutoriel) — Tuiles 1V & 3V, 1 rangée de 2 tuiles.
+export function createBoardM0() {
+  const board = emptyGrid(12, 6);
+  defineStreetZone(board, 0, 0, 11, 5, "street", "Rue");
+
+  // Tuile 1V (maison) : cuisine + chambre en haut, sortie en bas.
+  defineRoom(board, 0, 0, 2, 1, "kitchen", "1V - Cuisine");
+  defineRoom(board, 3, 0, 5, 1, "bedroom", "1V - Chambre");
+  defineRoom(board, 0, 4, 2, 5, "exit-room", "1V - Sortie");
+  addDoor(board, 1, 1, "south", { color: "green" });
+  addDoor(board, 4, 1, "south", { color: "green" });
+  addDoor(board, 1, 4, "north", { color: "green" });
+
+  // Tuile 3V (entrepôt) : un grand espace ouvert.
+  defineRoom(board, 6, 0, 11, 5, "warehouse", "3V - Entrepôt");
+  addDoor(board, 6, 2, "west", { color: "blue" });
+
+  markSpawn(board, 5, 0);
+  markSpawn(board, 11, 0);
+
+  markStart(board, 5, 2);
+  markStart(board, 5, 3);
+  markStart(board, 6, 2);
+  markStart(board, 6, 3);
+
+  markExit(board, 1, 5);
+
+  return board;
+}
+
+// --- M7 : Grindhouse — Tuiles 6V/4V (haut) et 3V/8V (bas), 2x2 tuiles.
+export function createBoardM7() {
+  const board = emptyGrid(12, 12);
+  defineStreetZone(board, 0, 0, 11, 11, "street", "Rue");
+
+  defineRoom(board, 0, 0, 5, 5, "tile-6v", "6V");
+  defineRoom(board, 6, 0, 11, 5, "tile-4v", "4V");
+  defineRoom(board, 0, 6, 5, 11, "tile-3v", "3V");
+  defineRoom(board, 6, 6, 11, 11, "tile-8v", "8V");
+
+  // Portes ouvertes entre tuiles (livret : "note the open doors on tiles 4V et 8V").
+  addDoor(board, 5, 2, "east", { color: "blue" });
+  addDoor(board, 8, 5, "south", { color: "blue" });
+  addDoor(board, 5, 8, "east", { color: "green" });
+  addDoor(board, 2, 5, "south", { color: "green" });
+
+  // Les 4 coins des bâtiments : "Zones surlignées" à bruit permanent dans le
+  // livret (perte de partie si un zombie s'y active) — non modélisé ici,
+  // gardées comme simples pièces d'angle.
+  markObjective(board, 1, 1, "green");
+  markObjective(board, 10, 1, "blue");
+  markObjective(board, 1, 10, "green");
+  markObjective(board, 10, 10, "blue");
+
+  markSpawn(board, 0, 0);
+  markSpawn(board, 11, 0);
+  markSpawn(board, 0, 11);
+  markSpawn(board, 11, 11);
+
+  markStart(board, 5, 5);
+  markStart(board, 5, 6);
+  markStart(board, 6, 5);
+  markStart(board, 6, 6);
+
+  markExit(board, 8, 8);
+
+  return board;
+}
+
+// --- M4 : Drive-by Shooting — Tuiles 5R/7R, 4V/3V, 6V/8V, 2 tuiles de large
+// sur 3 de haut.
+export function createBoardM4() {
+  const board = emptyGrid(12, 18);
+  defineStreetZone(board, 0, 0, 11, 17, "street", "Rue");
+
+  defineRoom(board, 0, 0, 5, 5, "tile-5r", "5R");
+  defineRoom(board, 6, 0, 11, 5, "tile-7r", "7R");
+  defineRoom(board, 0, 12, 5, 17, "tile-6v", "6V");
+  defineRoom(board, 6, 12, 11, 17, "tile-8v", "8V");
+  // Tuile centrale (4V/3V) : grand axe de rue commerçant, laissée en rue.
+
+  addDoor(board, 5, 2, "south", { color: "blue" });
+  addDoor(board, 6, 2, "south", { color: "blue" });
+  addDoor(board, 5, 15, "north", { color: "green" });
+  addDoor(board, 6, 15, "north", { color: "green" });
+
+  markObjective(board, 2, 2, "red");
+  markObjective(board, 9, 2, "red");
+  markObjective(board, 2, 15, "red");
+
+  markSpawn(board, 0, 0);
+  markSpawn(board, 11, 17);
+
+  markStart(board, 5, 8);
+  markStart(board, 5, 9);
+  markStart(board, 6, 8);
+  markStart(board, 6, 9);
+
+  markExit(board, 0, 8);
+  markExit(board, 0, 9);
+
+  return board;
+}
+
+// --- M6 : The Escape — Tuiles 5R/9R, 4V/1V, 6V/8V, 3 tuiles de large sur 2
+// de haut.
+export function createBoardM6() {
+  const board = emptyGrid(18, 12);
+  defineStreetZone(board, 0, 0, 17, 11, "street", "Rue");
+
+  defineRoom(board, 0, 0, 5, 5, "tile-5r", "5R");
+  defineRoom(board, 12, 0, 17, 5, "tile-9r", "9R");
+  defineRoom(board, 0, 6, 5, 11, "tile-6v", "6V");
+  defineRoom(board, 12, 6, 17, 11, "tile-8v", "8V");
+  // Tuiles centrales (4V/1V) : grande avenue centrale, laissée en rue.
+
+  addDoor(board, 5, 2, "east", { color: "blue" });
+  addDoor(board, 12, 2, "west", { color: "blue" });
+  addDoor(board, 5, 9, "east", { color: "green" });
+  addDoor(board, 12, 9, "west", { color: "green" });
+
+  markObjective(board, 2, 2, "red");
+  markObjective(board, 15, 2, "red");
+  markObjective(board, 2, 9, "red");
+
+  markSpawn(board, 0, 0);
+  markSpawn(board, 17, 0);
+  markSpawn(board, 0, 11);
+  markSpawn(board, 17, 11);
+
+  markStart(board, 8, 5);
+  markStart(board, 8, 6);
+  markStart(board, 9, 5);
+  markStart(board, 9, 6);
+
+  markExit(board, 8, 0);
+  markExit(board, 9, 0);
+
+  return board;
+}
+
 export function canMove(board, from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;

@@ -2,7 +2,7 @@
 // suivantes) mais adaptés à ce qu'on sait faire pour l'instant (pas de
 // voitures, pas d'Armes Épiques séparées, pas de cartes Nourriture).
 
-import { createBoardCrossroads, createBoardMall, createBoardHighway } from "./board.js";
+import { createBoardCrossroads, createBoardMall, createBoardHighway, createBoardM0, createBoardM7, createBoardM4, createBoardM6 } from "./board.js";
 import { dangerLevelForAdrenaline } from "./decks.js";
 
 export const SCENARIOS = [
@@ -56,6 +56,67 @@ export const SCENARIOS = [
       "Pas de Sortie obligatoire : la partie se gagne sur place.",
       "Amenez au moins un Survivant au Niveau de Danger Rouge (43 PA) pour gagner.",
       "Beaucoup de zones de spawn sur les deux bords de l'avenue : ça va chauffer.",
+    ],
+  },
+  {
+    id: "m0",
+    name: "M0 — Zombicide Life (Tutoriel)",
+    difficulty: "Facile",
+    time: "30 min",
+    flavor:
+      "La vraie mission d'initiation du livret (p. 36) : une petite maison à " +
+      "deux pièces et un entrepôt de l'autre côté de la rue. De quoi apprendre " +
+      "les bases avant de foncer vers la Sortie.",
+    boardFactory: createBoardM0,
+    objective: "collect_and_exit",
+    specialRules: [
+      "Pas d'Objectif à récupérer ici : filez simplement vers la Sortie une fois prêts.",
+      "Plateau reconstitué à partir des tuiles 1V et 3V du livret.",
+    ],
+  },
+  {
+    id: "m7",
+    name: "M7 — Grindhouse",
+    difficulty: "Difficile",
+    time: "45 min",
+    flavor:
+      "Un pâté de maisons en croix (tuiles 6V, 4V, 3V, 8V) où il faut " +
+      "récupérer les 4 Objectifs avant d'atteindre la Sortie centrale.",
+    boardFactory: createBoardM7,
+    objective: "collect_and_exit",
+    specialRules: [
+      "Récupérez les 4 Objectifs (un par bâtiment), puis rejoignez la Sortie.",
+      "Version adaptée : la règle originale des zones de bruit permanent (perte de partie) n'est pas implémentée.",
+    ],
+  },
+  {
+    id: "m4",
+    name: "M4 — Drive-by Shooting",
+    difficulty: "Moyen",
+    time: "90 min",
+    flavor:
+      "Trois bâtiments à sécuriser le long d'un grand axe commerçant (tuiles " +
+      "5R, 7R, 6V, 8V), avant de filer par le côté opposé au point de départ.",
+    boardFactory: createBoardM4,
+    objective: "collect_and_exit",
+    specialRules: [
+      "Récupérez les 3 Objectifs, puis rejoignez la Sortie.",
+      "Version adaptée : pas de voitures ni d'Armes Épiques séparées dans ce moteur de jeu.",
+    ],
+  },
+  {
+    id: "m6",
+    name: "M6 — The Escape",
+    difficulty: "Difficile",
+    time: "90 min",
+    flavor:
+      "Un supermarché tentaculaire (tuiles 5R, 9R, 6V, 8V) à piller des deux " +
+      "côtés d'une large avenue, avant de remonter vers la Sortie au nord.",
+    boardFactory: createBoardM6,
+    objective: "collect_and_exit",
+    specialRules: [
+      "Récupérez les 3 Objectifs, puis rejoignez la Sortie.",
+      "Version adaptée : pas de voitures ni de cartes Nourriture dans ce moteur de jeu.",
     ],
   },
 ];
