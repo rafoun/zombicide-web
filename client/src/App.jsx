@@ -40,7 +40,15 @@ export default function App() {
   const [zombiePhase, setZombiePhase] = useState(null);
 
   useEffect(() => {
-    socket.on("room_update", (updatedRoom) => setRoom(updatedRoom));
+    socket.on("room_update", (updatedRoom) => {
+      setRoom(updatedRoom);
+      // Le salon repasse en lobby (ex. l'hôte a cliqué "Retour au salon") :
+      // tout le monde doit quitter l'écran de partie, pas seulement l'hôte.
+      if (updatedRoom.status === "lobby") {
+        setGameState(null);
+        setLogMessages([]);
+      }
+    });
     socket.on("game_started", (state) => setGameState(state));
     socket.on("game_state", (state) => setGameState(state));
     socket.on("game_log", (messages) => setLogMessages((prev) => [...prev, ...messages].slice(-6)));
@@ -98,6 +106,7 @@ export default function App() {
   }
 
   function handlePlayAgain() {
+    socket.emit("return_to_lobby");
     setGameState(null);
     setLogMessages([]);
   }

@@ -96,6 +96,16 @@ io.on("connection", (socket) => {
     broadcastRoom(room);
   });
 
+  // "Retour au salon" après une partie : sans ça, le salon reste bloqué en
+  // status "playing" pour toujours et plus personne ne peut le rejoindre.
+  socket.on("return_to_lobby", () => {
+    const room = rooms.get(currentRoomCode);
+    if (!room || room.hostSocketId !== socket.id) return;
+    room.status = "lobby";
+    room.game = null;
+    broadcastRoom(room);
+  });
+
   socket.on("game_action", (action, callback) => {
     const room = rooms.get(currentRoomCode);
     if (!room || room.status !== "playing") {
