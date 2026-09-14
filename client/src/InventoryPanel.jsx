@@ -3,6 +3,13 @@ const EFFECT_LABEL = {
   open_door: "Force les portes verrouillées (clique dessus sur le plateau)",
 };
 
+function itemIcon(card) {
+  if (card.type === "weapon") return card.mode === "ranged" ? "🔫" : "🗡️";
+  if (card.effect === "heal") return "💊";
+  if (card.effect === "open_door") return "🔨";
+  return "🎒";
+}
+
 function ItemStats({ card }) {
   if (card.type === "weapon") {
     return (
@@ -27,14 +34,14 @@ function ItemStats({ card }) {
 export default function InventoryPanel({ equipment }) {
   return (
     <aside className="inventory-panel">
-      <h2 className="inventory-panel__title">Inventaire</h2>
+      <h2 className="inventory-panel__title">🎒 Inventaire</h2>
       {equipment.length === 0 ? (
         <p className="inventory-panel__empty">Rien pour l'instant. Fouille pour trouver du matériel.</p>
       ) : (
         <ul className="inventory-list">
           {equipment.map((card, i) => (
             <li key={i} className="inventory-item">
-              <span className="inventory-item__name">{card.name}</span>
+              <span className="inventory-item__name">{itemIcon(card)} {card.name}</span>
               <div className="item-tooltip">
                 <p className="item-tooltip__description">{card.description}</p>
                 <ItemStats card={card} />

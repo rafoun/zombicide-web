@@ -68,7 +68,11 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 
 .board-wrapper { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
 
-.turn-banner { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; font-family: var(--font-display); }
+.turn-banner { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; font-family: var(--font-display); padding: 0.4rem 1rem; border-radius: 3px; border-bottom: 3px solid var(--panel-border); }
+.turn-banner--blue { border-bottom-color: var(--wound-blue); }
+.turn-banner--yellow { border-bottom-color: var(--wound-yellow); }
+.turn-banner--orange { border-bottom-color: var(--wound-orange); }
+.turn-banner--red { border-bottom-color: var(--wound-red); }
 .turn-banner__round { font-size: 0.8rem; color: var(--bone-dim); letter-spacing: 0.08em; text-transform: uppercase; }
 .turn-banner__player { font-size: 1.2rem; }
 .turn-banner__player--me { color: var(--toxic-bright); }
@@ -85,7 +89,10 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .targeting-hint { margin: 0.25rem 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--blood-bright); text-align: center; }
 .board-wall { stroke: var(--bone-dim); stroke-width: 3; stroke-linecap: square; }
 .board-door { stroke-width: 3; stroke-linecap: round; }
-.board-door--locked { stroke-width: 4; stroke-dasharray: 4 3; }
+.board-door--locked { stroke-width: 4; }
+.board-door__leaf { stroke-width: 2.5; stroke-linecap: round; opacity: 0.9; }
+.board-door__lock rect { fill: var(--blood-bright); stroke: #0a0908; stroke-width: 0.6; }
+.board-door__lock path { stroke: var(--blood-bright); stroke-width: 1.2; }
 
 .board-icon--start { fill: var(--wound-blue); stroke: var(--bone); stroke-width: 1; }
 .board-icon--spawn { fill: var(--blood-bright); stroke: #0a0908; stroke-width: 1; }
@@ -96,6 +103,7 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .board-objective--red { stroke: var(--blood-bright); }
 
 .board-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; font-size: 0.68rem; color: var(--bone-dim); justify-content: center; max-width: 620px; opacity: 0.85; }
+.board-legend__zombie { display: inline-flex; align-items: center; gap: 0.3rem; }
 .board-legend__swatch { display: inline-block; width: 8px; height: 8px; margin-right: 0.25rem; border-radius: 2px; vertical-align: middle; }
 .board-legend__swatch--building { background: #241c14; }
 .board-legend__swatch--street { background: #262420; }
@@ -112,14 +120,15 @@ button:disabled { background: #333; border-color: #444; color: var(--bone-dim); 
 .zombie-token__letter { font-family: var(--font-mono); font-size: 10px; font-weight: bold; fill: #0a0908; pointer-events: none; }
 .zombie-count { font-family: var(--font-mono); font-size: 11px; fill: var(--bone); }
 
-.board-legend__swatch--z-walker { background: var(--toxic); border-radius: 50%; }
-.board-legend__swatch--z-runner { background: #b3a13c; border-radius: 50%; }
-.board-legend__swatch--z-brute { background: #5a6b2a; border-radius: 50%; }
-.board-legend__swatch--z-abomination { background: var(--blood-bright); border-radius: 50%; }
 
 .character-token { stroke: #0a0908; stroke-width: 2; fill: #5b7fb5; }
 .character-token--me { fill: var(--toxic-bright); }
 .character-token--dead { fill: #444 !important; opacity: 0.6; }
+.character-token__ring { fill: none; stroke-width: 2.5; }
+.character-token__ring--blue { stroke: var(--wound-blue); }
+.character-token__ring--yellow { stroke: var(--wound-yellow); }
+.character-token__ring--orange { stroke: var(--wound-orange); }
+.character-token__ring--red { stroke: var(--wound-red); }
 .character-token__label { font-family: var(--font-mono); font-size: 10px; fill: #0a0908; }
 
 .player-panel, .inventory-panel {

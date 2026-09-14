@@ -51,23 +51,23 @@ export default function PlayerPanel({
     <aside className="player-panel">
       {mission && (
         <div className="mission-box">
-          <span className="mission-box__name">{mission.name}</span>
+          <span className="mission-box__name">🎯 {mission.name}</span>
           <span className="mission-box__progress">{mission.progress}</span>
         </div>
       )}
 
       <h2 className="player-panel__name">{character.name}</h2>
-      {character.dead && <p className="dead-label">Éliminé</p>}
+      {character.dead && <p className="dead-label">💀 Éliminé</p>}
 
       <div className="wound-track">
         {WOUND_TRACK.map((color, i) => (
           <div key={color} className={`wound-pip wound-pip--${color} ${i === woundIndex ? "wound-pip--active" : ""}`} />
         ))}
       </div>
-      <p className="wound-label">{character.dead ? "Mort" : `${character.wounds}/3 blessures`}</p>
+      <p className="wound-label">🩸 {character.dead ? "Mort" : `${character.wounds}/3 blessures`}</p>
 
       <div className="stat-block">
-        <span className="stat-block__label">Actions</span>
+        <span className="stat-block__label">⚡ Actions</span>
         <div className="action-pips">
           {[0, 1, 2, 3].map((i) => (
             <span key={i} className={`action-pip ${i < character.actionsLeft ? "action-pip--full" : ""}`} />
@@ -76,7 +76,7 @@ export default function PlayerPanel({
       </div>
 
       <div className="stat-block">
-        <span className="stat-block__label">Adrénaline — Niveau {level}</span>
+        <span className="stat-block__label">💉 Adrénaline — Niveau {level}</span>
         <div className="kill-gauge">
           <span className="kill-gauge__count">{character.adrenaline}</span>
           <div className="kill-gauge__bar">
@@ -86,12 +86,12 @@ export default function PlayerPanel({
       </div>
 
       <div className="stat-block">
-        <span className="stat-block__label">Zombies éliminés</span>
+        <span className="stat-block__label">💀 Zombies éliminés</span>
         <p className="kill-total">{character.zombieKills}</p>
       </div>
 
       <div className="stat-block">
-        <span className="stat-block__label">Compétences ({level})</span>
+        <span className="stat-block__label">⭐ Compétences ({level})</span>
         <ul className="skill-list">
           {skills.map((s) => <li key={s.id} className="skill-list__item"><strong>{s.name}</strong> — {s.description}</li>)}
         </ul>
@@ -100,7 +100,7 @@ export default function PlayerPanel({
       {isMyTurn && (
         <div className="player-panel__actions">
           {!character.dead && zombiesHere.length > 0 && (
-            <p className="zombies-here">Zombies ici : {zombieSummary(zombiesHere)}</p>
+            <p className="zombies-here">🧟 Zombies ici : {zombieSummary(zombiesHere)}</p>
           )}
 
           {!character.dead && !isTargetingAnything && weapons.length > 1 && (
@@ -111,37 +111,37 @@ export default function PlayerPanel({
             >
               {weapons.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.name} ({w.mode === "ranged" ? `distance, Portée ${w.range?.[0] ?? 0}-${w.range?.[1] ?? 0}` : "mêlée"}, Dégât {w.damage})
+                  {w.mode === "ranged" ? "🔫" : "🗡️"} {w.name} ({w.mode === "ranged" ? `distance, Portée ${w.range?.[0] ?? 0}-${w.range?.[1] ?? 0}` : "mêlée"}, Dégât {w.damage})
                 </option>
               ))}
             </select>
           )}
 
           {!character.dead && isTargetingAnything && (
-            <button className="button--secondary" onClick={onCancelTargeting}>Annuler la visée</button>
+            <button className="button--secondary" onClick={onCancelTargeting}>✕ Annuler la visée</button>
           )}
 
           {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && canAttack && (
             <button onClick={onAttack}>
-              Attaquer {activeWeapon ? `(${activeWeapon.name}, ${activeWeapon.mode === "ranged" ? "distance" : "mêlée"})` : "(mains nues)"}
+              {activeWeapon?.mode === "ranged" ? "🔫" : "⚔️"} Attaquer {activeWeapon ? `(${activeWeapon.name}, ${activeWeapon.mode === "ranged" ? "distance" : "mêlée"})` : "(mains nues)"}
             </button>
           )}
 
           {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && character.wounds > 0 && healKit && (
-            <button onClick={() => onUseItem(healKit.id)}>Utiliser la Trousse de secours (-1 blessure)</button>
+            <button onClick={() => onUseItem(healKit.id)}>💊 Utiliser la Trousse de secours (-1 blessure)</button>
           )}
 
-          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && canSearch && <button onClick={onSearch}>Fouiller</button>}
+          {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && canSearch && <button onClick={onSearch}>🔍 Fouiller</button>}
 
           {!character.dead && !isTargetingAnything && character.actionsLeft > 0 && skillIds.includes("jump") && (
-            <button onClick={onJump}>Sauter 2 zones (Jump)</button>
+            <button onClick={onJump}>🦘 Sauter 2 zones (Jump)</button>
           )}
 
           {!character.dead && !isTargetingAnything && skillIds.includes("improvised_melee") && !character.improvisedUsedThisTurn && zombiesHere.length > 0 && (
-            <button onClick={onImprovisedMelee}>Attaque de fortune (gratuite, 1×/tour)</button>
+            <button onClick={onImprovisedMelee}>🔨 Attaque de fortune (gratuite, 1×/tour)</button>
           )}
 
-          {!isTargetingAnything && <button className="button--secondary" onClick={onEndTurn}>Terminer mon tour</button>}
+          {!isTargetingAnything && <button className="button--secondary" onClick={onEndTurn}>⏭️ Terminer mon tour</button>}
         </div>
       )}
     </aside>

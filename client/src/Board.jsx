@@ -44,6 +44,34 @@ function zonesInRange(board, from, maxRange) {
   });
 }
 
+// Une forme distincte par type (pas seulement une couleur) : lisible même
+// sans distinguer les teintes, et reconnaissable d'un coup d'œil une fois
+// appris. Marcheur = rond, Coureur = triangle (vitesse), Brute = hexagone
+// (carrure), Abomination = étoile à pointes (danger maximal).
+function ZombieShape({ type, cx, cy, r, className }) {
+  if (type === "runner") {
+    const pts = [[cx, cy - r], [cx + r * 0.95, cy + r * 0.8], [cx - r * 0.95, cy + r * 0.8]];
+    return <polygon points={pts.map((p) => p.join(",")).join(" ")} className={className} />;
+  }
+  if (type === "brute") {
+    const pts = [0, 60, 120, 180, 240, 300].map((deg) => {
+      const rad = (deg * Math.PI) / 180;
+      return [cx + r * Math.sin(rad), cy - r * Math.cos(rad)];
+    });
+    return <polygon points={pts.map((p) => p.join(",")).join(" ")} className={className} />;
+  }
+  if (type === "abomination") {
+    const pts = [];
+    for (let i = 0; i < 8; i++) {
+      const deg = i * 45;
+      const rad = (deg * Math.PI) / 180;
+      const radius = i % 2 === 0 ? r * 1.15 : r * 0.55;
+      pts.push([cx + radius * Math.sin(rad), cy - radius * Math.cos(rad)]);
+    }
+    return <polygon points={pts.map((p) => p.join(",")).join(" ")} className={className} />;
+  }
+  return <circle cx={cx} cy={cy} r={r} className={className} />;
+}
 const ZOMBIE_TYPE_LABEL = {
   walker: "Marcheur",
   runner: "Coureur",
@@ -59,6 +87,14 @@ const ZOMBIE_DISPLAY = {
   brute: { letter: "B", size: 12 },
   abomination: { letter: "A", size: 14 },
 };
+
+const DANGER_THRESHOLDS = { blue: 0, yellow: 7, orange: 19, red: 43 };
+function dangerLevel(adrenaline) {
+  if (adrenaline >= DANGER_THRESHOLDS.red) return "red";
+  if (adrenaline >= DANGER_THRESHOLDS.orange) return "orange";
+  if (adrenaline >= DANGER_THRESHOLDS.yellow) return "yellow";
+  return "blue";
+}
 
 export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, targetingWeapon, onConfirmTarget }) {
   const { board, characters, zombies, turnOrder, currentTurnIndex, round } = gameState;
@@ -146,10 +182,10 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
 
   return (
     <div className="board-wrapper">
-      <div className="turn-banner">
+      <div className={`turn-banner turn-banner--${dangerLevel(currentCharacter?.adrenaline || 0)}`}>
         <span className="turn-banner__round">Manche {round}</span>
         <span className={`turn-banner__player ${isMyTurn ? "turn-banner__player--me" : ""}`}>
-          Tour de {currentCharacter?.name}
+          {isMyTurn ? "🎯 " : ""}Tour de {currentCharacter?.name}
           {isMyTurn ? " — c'est toi" : ""}
         </span>
       </div>
@@ -234,13 +270,31 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
           if (value === true) {
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="board-wall" />;
           }
-          // Porte : trait coloré, pointillé et plus fin si verrouillée.
+          // Porte : trait coloré, avec un repère perpendiculaire façon "battant"
+          // au milieu, et un petit cadenas si elle est verrouillée.
           const color = DOOR_COLOR[value.color] || "#8a7f5a";
+          const doorColor = value.locked ? DOOR_COLOR.red : color;
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          const vertical = side === "east" || side === "west";
           return (
-            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-              className={`board-door ${value.locked ? "board-door--locked" : ""}`}
-              stroke={value.locked ? DOOR_COLOR.red : color}
-            />
+            <g key={i}>
+              <line x1={x1} y1={y1} x2={x2} y2={y2}
+                className={`board-door ${value.locked ? "board-door--locked" : ""}`}
+                stroke={doorColor}
+              />
+              <line
+                x1={vertical ? midX - 5 : midX} y1={vertical ? midY : midY - 5}
+                x2={vertical ? midX + 5 : midX} y2={vertical ? midY : midY + 5}
+                className="board-door__leaf" stroke={doorColor}
+              />
+              {value.locked && (
+                <g transform={`translate(${midX}, ${midY})`} className="board-door__lock">
+                  <rect x={-4} y={-1} width={8} height={6} rx={1} />
+                  <path d="M -2.5 -1 L -2.5 -3 A 2.5 2.5 0 0 1 2.5 -3 L 2.5 -1" fill="none" />
+                </g>
+              )}
+            </g>
           );
         })}
 
@@ -263,7 +317,7 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
                 const r = single ? display.size + 2 : display.size - 2;
                 return (
                   <g key={g.type} title={ZOMBIE_TYPE_LABEL[g.type]}>
-                    <circle cx={gx} cy={gy} r={r} className={`zombie-token zombie-token--${g.type}`} />
+                    <ZombieShape type={g.type} cx={gx} cy={gy} r={r} className={`zombie-token zombie-token--${g.type}`} />
                     <text x={gx} y={gy + 3.5} textAnchor="middle" className="zombie-token__letter">
                       {display.letter}
                     </text>
@@ -277,23 +331,32 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
           );
         })}
 
-        {characters.map((c) => (
-          <g key={c.playerId}>
-            <circle
-              cx={c.position.x * CELL_SIZE + CELL_SIZE / 2}
-              cy={c.position.y * CELL_SIZE + CELL_SIZE / 2}
-              r={CELL_SIZE / 3.2}
-              className={`character-token ${c.playerId === mySocketId ? "character-token--me" : ""} ${c.dead ? "character-token--dead" : ""}`}
-            />
-            <text
-              x={c.position.x * CELL_SIZE + CELL_SIZE / 2}
-              y={c.position.y * CELL_SIZE + CELL_SIZE / 2 + 4}
-              textAnchor="middle" className="character-token__label"
-            >
-              {c.name.slice(0, 3)}
-            </text>
-          </g>
-        ))}
+        {characters.map((c) => {
+          const woundLevel = c.dead ? "red" : ["blue", "yellow", "orange"][c.wounds] || "orange";
+          return (
+            <g key={c.playerId}>
+              <circle
+                cx={c.position.x * CELL_SIZE + CELL_SIZE / 2}
+                cy={c.position.y * CELL_SIZE + CELL_SIZE / 2}
+                r={CELL_SIZE / 3.2 + 2.5}
+                className={`character-token__ring character-token__ring--${woundLevel}`}
+              />
+              <circle
+                cx={c.position.x * CELL_SIZE + CELL_SIZE / 2}
+                cy={c.position.y * CELL_SIZE + CELL_SIZE / 2}
+                r={CELL_SIZE / 3.2}
+                className={`character-token ${c.playerId === mySocketId ? "character-token--me" : ""} ${c.dead ? "character-token--dead" : ""}`}
+              />
+              <text
+                x={c.position.x * CELL_SIZE + CELL_SIZE / 2}
+                y={c.position.y * CELL_SIZE + CELL_SIZE / 2 + 4}
+                textAnchor="middle" className="character-token__label"
+              >
+                {c.name.slice(0, 3)}
+              </text>
+            </g>
+          );
+        })}
       </svg>
 
       <div className="board-legend">
@@ -307,8 +370,11 @@ export default function Board({ gameState, mySocketId, onMoveTo, onForceDoor, ta
       </div>
       <div className="board-legend">
         {Object.entries(ZOMBIE_TYPE_LABEL).map(([type, label]) => (
-          <span key={type}>
-            <i className={`board-legend__swatch board-legend__swatch--z-${type}`} /> {label}
+          <span key={type} className="board-legend__zombie">
+            <svg width="14" height="14" viewBox="-9 -9 18 18">
+              <ZombieShape type={type} cx={0} cy={0} r={7} className={`zombie-token zombie-token--${type}`} />
+            </svg>
+            {label}
           </span>
         ))}
       </div>
