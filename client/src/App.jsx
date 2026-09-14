@@ -7,6 +7,7 @@ import EventLog from "./EventLog.jsx";
 import DiceRoll from "./DiceRoll.jsx";
 import ZombiePhaseViewer from "./ZombiePhaseViewer.jsx";
 import GameOverScreen from "./GameOverScreen.jsx";
+import RulesModal from "./RulesModal.jsx";
 
 function missionProgress(gameState) {
   const alive = gameState.characters.filter((c) => !c.dead);
@@ -30,6 +31,7 @@ export default function App() {
   const [name, setName] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [room, setRoom] = useState(null);
+  const [showRules, setShowRules] = useState(false);
   const [gameState, setGameState] = useState(null);
   const [logMessages, setLogMessages] = useState([]);
   const [error, setError] = useState("");
@@ -154,6 +156,8 @@ export default function App() {
       <div className="game-layout">
         {diceResult && <DiceRoll result={diceResult} onDone={() => setDiceResult(null)} />}
         {zombiePhase && <ZombiePhaseViewer steps={zombiePhase} onDismiss={() => setZombiePhase(null)} />}
+        {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+        <button className="rules-fab" onClick={() => setShowRules(true)} title="Comment jouer">?</button>
         <PlayerPanel
           character={myCharacter}
           isMyTurn={isMyTurn}
@@ -197,7 +201,11 @@ export default function App() {
 
     return (
       <div className="app app--lobby">
-        <h1>Salon {room.code}</h1>
+        {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+        <div className="lobby-header">
+          <h1>Salon {room.code}</h1>
+          <button className="button--secondary" onClick={() => setShowRules(true)}>Comment jouer ?</button>
+        </div>
         <p>Partage ce code à tes amis pour qu'ils rejoignent.</p>
         <ul className="player-list">
           {room.players.map((p, i) => {
@@ -263,6 +271,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
       <h1>Zombicide Web</h1>
       <label>
         Ton nom
@@ -274,6 +283,7 @@ export default function App() {
           <input placeholder="Code du salon" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} />
           <button onClick={handleJoinRoom}>Rejoindre</button>
         </div>
+        <button className="button--secondary" onClick={() => setShowRules(true)}>Comment jouer ?</button>
       </div>
       {error && <p className="error">{error}</p>}
     </div>
